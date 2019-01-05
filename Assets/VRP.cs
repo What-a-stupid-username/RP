@@ -2,6 +2,7 @@
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
 using System;
+using System.Collections.Generic;
 
 namespace vrp
 {
@@ -14,7 +15,7 @@ namespace vrp
         public VRP(VRPAsset asset)
         {
             m_asset = asset;
-            m_renderResources = new RenderResources();
+            m_renderResources = new RenderResources(asset);
         }
 
         public override void Dispose()
@@ -44,16 +45,27 @@ namespace vrp
 
                 var results = new CullResults();
                 CullResults.Cull(camera, renderContext, out results);
+
+                if (camera.cameraType != CameraType.SceneView && camera.orthographic == false)
+                    PrepareLights(results.visibleLights, camera);
                 
-                //update light buffer
-                m_renderResources.m_lightResources.UpdateLightBuffer(results.visibleLights);
 
                 var filterSetting = new FilterRenderersSettings(true);
                 filterSetting.renderQueueRange = RenderQueueRange.opaque;
                 filterSetting.layerMask = camera.cullingMask;
-                
+
                 {
-                    var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP"));
+                    var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_PREZ"));
+                    renderSetting.sorting.flags = SortFlags.None;
+                    renderContext.DrawRenderers(results.visibleRenderers, ref renderSetting, filterSetting);
+                }
+
+
+
+
+
+                {
+                    var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_BASE"));
                     renderSetting.sorting.flags = SortFlags.None;
                     renderContext.DrawRenderers(results.visibleRenderers, ref renderSetting, filterSetting);
                 }
@@ -66,6 +78,26 @@ namespace vrp
         {
             Array.Sort(cameras, (c1, c2) => { return c1.depth.CompareTo(c2.depth); });
         }
+
+        private void PrepareLights(List<VisibleLight> lights, Camera camera)
+        {
+            //update light buffer
+            m_renderResources.m_lightResources.UpdateLightBuffer(lights);
+
+            List<Light> shadow_directional_lights = new List<Light>();
+
+            foreach (var light in lights)
+            {
+                if (light.light.shadows != LightShadows.None && light.lightType == LightType.Directional)
+                {
+                    shadow_directional_lights.Add(light.light);
+                }
+            }
+            m_renderResources.m_shadowResources.UpdateDirectionalLights(shadow_directional_lights, camera);
+
+        }
+
+
 
 
     }

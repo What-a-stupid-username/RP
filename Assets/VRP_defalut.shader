@@ -15,8 +15,21 @@ Shader "Custom/NewSurfaceShader"
 			LOD 200
 
 			Pass {
-				Name "VRP"
-				Tags { "LightMode" = "VRP" }
+				Name "VRP_PREZ"
+				Tags{ "LightMode" = "VRP_PREZ" }
+				
+				ZWrite on
+				ZTest on
+				ColorMask off
+			}
+
+
+			Pass {
+				Name "VRP_BASE"
+				Tags { "LightMode" = "VRP_BASE" }
+				
+				ZTest on
+				ZWrite off
 
 				CGPROGRAM
 				// compile directives
