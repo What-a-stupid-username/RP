@@ -10,9 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 0}
-  m_Name: NewVRPAsset
-  m_EditorClassIdentifier: Assembly-CSharp:vrp:VRPAsset
-  cascadeNum: 4
-  cascadeDistribution: 1.2
-  shadowResolution: 4096
-  shadowDistance: 50
+  m_Name: VRP Resources
+  m_EditorClassIdentifier: Assembly-CSharp:vrp:VRPResources
+  cs_GetMinMaxOfTexture_32x32: {fileID: 7200000, guid: 069d2a05efa56014ca4c6a05cc673c52,
+    type: 3}

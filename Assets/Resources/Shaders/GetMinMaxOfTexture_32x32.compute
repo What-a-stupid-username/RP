@@ -1,0 +1,37 @@
+﻿#pragma kernel Main
+
+Texture2D<float> _Texture;
+
+struct MinMax {
+	float4 min, max;
+};
+
+RWStructuredBuffer<MinMax> _Result;
+
+int _Width, _Height;
+
+inline void GetValue(uint2 index, out float4 a, out float4 b) {
+	a = 1;	b = 0;
+
+	for (uint i = index.x; i < index.x + _Width; i++) {
+		for (uint j = index.y; j < index.y + _Height; j++) {
+			float4 value = _Texture[uint2(i, j)];
+			a = min(a, value);
+			b = max(b, value);
+		}
+	}
+	a = a < 0 ? 0 : a;
+}
+
+
+[numthreads(32,32,1)]
+void Main(uint3 id : SV_DispatchThreadID)
+{
+	uint2 block = id.xy * uint2(_Width, _Height);
+
+	float4 a, b;
+	GetValue(block, a, b);
+
+	_Result[id.x * 32 + id.y].min = a;
+	_Result[id.x * 32 + id.y].max = b;
+}
