@@ -60,10 +60,6 @@ namespace vrp
                 var cb_postprocess = CommandBufferPool.Get("Post");
 #if UNITY_EDITOR
                 VRPDebuger.ShowTexture(ref cb_postprocess, m_resources.m_depth_normal.data, camera.targetTexture, 0);
-                VRPDebuger.ShowTextureArray(ref cb_postprocess, m_resources.m_shadowResources.m_shadowArray.data, camera.targetTexture, 0);
-                VRPDebuger.ShowTextureArray(ref cb_postprocess, m_resources.m_shadowResources.m_shadowArray.data, camera.targetTexture, 1);
-                VRPDebuger.ShowTextureArray(ref cb_postprocess, m_resources.m_shadowResources.m_shadowArray.data, camera.targetTexture, 2);
-                VRPDebuger.ShowTextureArray(ref cb_postprocess, m_resources.m_shadowResources.m_shadowArray.data, camera.targetTexture, 3);
 #endif
                 renderContext.ExecuteCommandBuffer(cb_postprocess);
                 CommandBufferPool.Release(cb_postprocess);

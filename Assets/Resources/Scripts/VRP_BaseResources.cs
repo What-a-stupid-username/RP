@@ -48,7 +48,7 @@ namespace vrp
             m_name = name;
             m_format = textureFormat;
             m_liner = liner;
-            m_msaa = msaa ? 4 : 1;
+            m_msaa = msaa ? 8 : 1;
         }
 
         public void Dispose()

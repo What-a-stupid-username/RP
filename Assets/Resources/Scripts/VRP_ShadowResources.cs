@@ -222,7 +222,7 @@ namespace vrp
             shaderPropertyID = new ShaderPropertyID();
             helper_ = new GameObject("");
             helper_.SetActive(false);
-            helper_.hideFlags = HideFlags.DontSave;//| HideFlags.HideInHierarchy;
+            helper_.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
             helper = helper_.AddComponent<Camera>();
             helper.orthographic = true;
             helper.nearClipPlane = 0.01f;

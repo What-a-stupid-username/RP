@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 28e02f629d0cd85408d57d1fc6d3d247, type: 3}
   m_Name: NewVRPAsset
-  m_EditorClassIdentifier: Assembly-CSharp:vrp:VRPAsset
+  m_EditorClassIdentifier: 
   cascadeNum: 4
   cascadeDistribution: 1.2
   shadowResolution: 4096

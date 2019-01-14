@@ -22,7 +22,8 @@ namespace vrp
 
         public VRenderResources(VRPAsset asset)
         {
-            m_VRPResources = Resources.FindObjectsOfTypeAll<VRPResources>()[0];
+            m_VRPResources = Resources.Load<VRPResources>("VRPResources");
+            if (m_VRPResources == null) Debug.LogError("Can't find VRP resources!");
 
             m_color = new VRenderTexture2D("color", RenderTextureFormat.ARGB32, true, true);
             m_depth_normal = new VRenderTexture2D("depth_normal", RenderTextureFormat.ARGB64, true, true);

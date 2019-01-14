@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
-  m_Name: VRP Resources
-  m_EditorClassIdentifier: Assembly-CSharp:vrp:VRPResources
+  m_Script: {fileID: 11500000, guid: 63964b662919870478c4b5800276830b, type: 3}
+  m_Name: VRPResources
+  m_EditorClassIdentifier: 
   cs_GetMinMaxOfTexture_32x32: {fileID: 7200000, guid: 069d2a05efa56014ca4c6a05cc673c52,
     type: 3}
