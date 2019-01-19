@@ -9,34 +9,23 @@ namespace vrp
 {
     public abstract class Renderer
     {
-        protected CullResults m_cullResults;
-        virtual public void Execute(ref ScriptableRenderContext renderContext, Camera camera)
-        {
-            if (camera.orthographic == true)
-            {
-                Debug.LogError("Orthographic camera is not yet supported.");
-            }
-
-            renderContext.SetupCameraProperties(camera);
-
-            if (camera.cameraType == CameraType.SceneView)
-                ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
-
-            m_cullResults = new CullResults();
-            CullResults.Cull(camera, renderContext, out m_cullResults);
-        }
+        protected VRenderResources m_renderResources;
+        virtual public void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
+        { }
 
         public abstract void Dispose();
-
+        public void AllocateResources(VRenderResources resources)
+        {
+            m_renderResources = resources;
+        }
     }
 
     class PreZRenderer : Renderer
     {
-        public VRenderResources m_resources;
 
-        public override void Execute(ref ScriptableRenderContext renderContext, Camera camera)
+        public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            base.Execute(ref renderContext, camera);
+            //base.Execute(ref renderContext, cullResults, camera);
             
             CommandBuffer cb = CommandBufferPool.Get("PreZRenderer");
 
@@ -44,32 +33,17 @@ namespace vrp
             filterSetting.renderQueueRange = RenderQueueRange.opaque;
             filterSetting.layerMask = camera.cullingMask;
 
-            cb.SetRenderTarget(m_resources.m_depth_normal.data);
+            renderContext.SetupCameraProperties(camera);
+
+            cb.SetRenderTarget(m_renderResources.depth_normal.data);
             cb.ClearRenderTarget(true, true, Color.clear);
             renderContext.ExecuteCommandBuffer(cb);
 
             var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_PREZ"));
             renderSetting.sorting.flags = SortFlags.None;
-            renderContext.DrawRenderers(m_cullResults.visibleRenderers, ref renderSetting, filterSetting);
+            renderContext.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
 
             CommandBufferPool.Release(cb);
-        }
-
-        //bool NeedInvV(Camera camera)
-        //{
-        //    if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
-        //    {
-        //        if (camera.cameraType == CameraType.Game)
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //    return false;
-        //}
-
-        public PreZRenderer(VRenderResources resources)
-        {
-            m_resources = resources;
         }
 
         public override void Dispose() { }
@@ -78,20 +52,18 @@ namespace vrp
 
     class CommonRenderer : Renderer
     {
-        private VRenderResources m_renderResources;
-
-        public override void Execute(ref ScriptableRenderContext renderContext, Camera camera)
+        public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            base.Execute(ref renderContext, camera);
+            //base.Execute(ref renderContext, cullResults, camera);
 
-            PrepareLights(ref renderContext, m_cullResults.visibleLights, camera);
+            PrepareLights(ref renderContext, cullResults.visibleLights, camera);
 
             renderContext.SetupCameraProperties(camera);
 
             CommandBuffer cb = CommandBufferPool.Get("CommonRenderer_setbuffer");
             
-            RenderTexture cmrt = m_renderResources.m_color.data;
-            cb.SetRenderTarget(cmrt, m_renderResources.m_depth_normal.data);
+            RenderTexture cmrt = m_renderResources.color.data;
+            cb.SetRenderTarget(cmrt, m_renderResources.depth_normal.data);
             cb.ClearRenderTarget(false, true, Color.black);
             renderContext.ExecuteCommandBuffer(cb);
 
@@ -100,11 +72,11 @@ namespace vrp
             filterSetting.layerMask = camera.cullingMask;
 
             {
-                renderContext.ExecuteCommandBuffer(m_renderResources.m_setup_per_camera_properties);
-                m_renderResources.m_setup_per_camera_properties.Clear();
+                renderContext.ExecuteCommandBuffer(m_renderResources.setup_per_camera_properties);
+                m_renderResources.setup_per_camera_properties.Clear();
                 var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_BASE"));
                 renderSetting.sorting.flags = SortFlags.None;
-                renderContext.DrawRenderers(m_cullResults.visibleRenderers, ref renderSetting, filterSetting);
+                renderContext.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
 
             renderContext.DrawSkybox(camera);
@@ -120,9 +92,9 @@ namespace vrp
         private void PrepareLights(ref ScriptableRenderContext renderContext, List<VisibleLight> lights, Camera camera)
         {
             //update light buffer
-            m_renderResources.m_lightResources.UpdateLightBuffer(lights, ref m_renderResources.m_setup_per_camera_properties);
+            m_renderResources.lightResources.UpdateLightBuffer(lights, ref m_renderResources.setup_per_camera_properties);
 
-            //calcu directional light shadow
+            //calcu directional light shadow map
             {
                 List<Light> shadow_directional_lights = new List<Light>();
 
@@ -133,15 +105,23 @@ namespace vrp
                         shadow_directional_lights.Add(light.light);
                     }
                 }
-                m_renderResources.m_shadowResources.UpdateDirectionalLights(ref renderContext, shadow_directional_lights, camera, ref m_renderResources.m_setup_per_camera_properties);
+                m_renderResources.shadowResources.UpdateDirectionalLights(ref renderContext, shadow_directional_lights, camera, ref m_renderResources.setup_per_camera_properties);
             }
 
+            //calcu point light shadow map
+            {
+                List<Light> shadow_point_lights = new List<Light>();
 
-        }
+                foreach (var light in lights)
+                {
+                    if (light.light.shadows != LightShadows.None && light.lightType == LightType.Point)
+                    {
+                        shadow_point_lights.Add(light.light);
+                    }
+                }
+                m_renderResources.shadowResources.UpdatePointLights(ref renderContext, shadow_point_lights, camera, ref m_renderResources.setup_per_camera_properties);
+            }
 
-        public CommonRenderer(VRenderResources resources)
-        {
-            m_renderResources = resources;
         }
 
         public override void Dispose() {}

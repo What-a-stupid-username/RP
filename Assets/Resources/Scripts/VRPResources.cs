@@ -8,6 +8,7 @@ namespace vrp
     public class VRPResources : ScriptableObject
     {
         public ComputeShader cs_GetMinMaxOfTexture_32x32;
+        public Shader defaultShader;
     }
 }
 

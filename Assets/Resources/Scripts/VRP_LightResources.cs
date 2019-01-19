@@ -28,18 +28,18 @@ namespace vrp
                 lightSum = Shader.PropertyToID("_LightSum");
             }
         };
-        private ShaderPropertyID shaderPropertyID;
+        private static readonly ShaderPropertyID shaderPropertyID = new ShaderPropertyID();
 
         public void UpdateLightBuffer(List<VisibleLight> lights, ref CommandBuffer setup_properties)
         {
-            setup_properties.SetGlobalInt(shaderPropertyID.lightSum, lights.Count);
-            if (lightBuffer.TestNeedModify(lights.Count))
-                BindLightBuffer(lights.Count, ref setup_properties);
+            lightBuffer.TestNeedModify(lights.Count);
+            BindProperties(lights.Count, ref setup_properties);
             if (lights.Count == 0) return;
 
             List<LightStruct> lights_ = new List<LightStruct>();
             int dir_shadow_index = 0;
-            foreach(var light in lights)
+            int point_shadow_index = 0;
+            foreach (var light in lights)
             {
                 LightStruct lightStruct = new LightStruct();
                 Matrix4x4 l2w = light.localToWorld;
@@ -61,6 +61,8 @@ namespace vrp
                             lightStruct.pos_type = new Vector4(l2w.m03, l2w.m13, l2w.m23, 1);
                             lightStruct.geometry = new Vector3(l2w.m02, l2w.m12, l2w.m22).normalized;
                             lightStruct.geometry.w = light.range;
+                            if (light.light.shadows != LightShadows.None)
+                                lightStruct.others.x = point_shadow_index++;
                         }
                         break;
                     case LightType.Spot:
@@ -78,8 +80,9 @@ namespace vrp
             lightBuffer.data.SetData(lights_);
         }
 
-        public void BindLightBuffer(int lightNum, ref CommandBuffer cb)
+        public void BindProperties(int lightNum, ref CommandBuffer cb)
         {
+            cb.SetGlobalInt(shaderPropertyID.lightSum, lightNum);
             if (lightBuffer.IsValid())
             {
                 cb.SetGlobalBuffer(shaderPropertyID.lightBuffer, lightBuffer.data);
@@ -88,7 +91,6 @@ namespace vrp
 
         public LightResources()
         {
-            shaderPropertyID = new ShaderPropertyID();
             lightBuffer = new VComputeBuffer(64);
         }
         public void Dispose()

@@ -14,5 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cascadeNum: 4
   cascadeDistribution: 1.2
-  shadowResolution: 4096
+  directionalShadowResolution: 4096
   shadowDistance: 50
+  pointShadowResolution: 512
+  enableTessellation: 1

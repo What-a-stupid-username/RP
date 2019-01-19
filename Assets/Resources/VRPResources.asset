@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cs_GetMinMaxOfTexture_32x32: {fileID: 7200000, guid: 069d2a05efa56014ca4c6a05cc673c52,
     type: 3}
+  defaultShader: {fileID: 4800000, guid: a27a3bc6d4de40343b0b6cf9c697720a, type: 3}

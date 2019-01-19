@@ -3,6 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
 using System;
 using System.Collections.Generic;
+using UnityEngine.Profiling;
 
 namespace vrp
 {
@@ -11,8 +12,6 @@ namespace vrp
     {
         private readonly VRPAsset m_asset;
         
-        VRenderResources m_resources;
-
         PreZRenderer m_PreZRenderer;
         CommonRenderer m_commonRenderer;
 
@@ -20,18 +19,16 @@ namespace vrp
         public VRP(VRPAsset asset)
         {
             m_asset = asset;
-
-            m_resources = new VRenderResources(m_asset);
-
-            m_PreZRenderer = new PreZRenderer(m_resources);
-            m_commonRenderer = new CommonRenderer(m_resources);
+            
+            m_PreZRenderer = new PreZRenderer();
+            m_commonRenderer = new CommonRenderer();
         }
 
         public override void Dispose()
         {
             base.Dispose();
 
-            m_resources.Dispose();
+            VRenderResourcesPool.Dispose();
 
             m_PreZRenderer.Dispose();
             m_commonRenderer.Dispose();
@@ -47,24 +44,42 @@ namespace vrp
 
             foreach (var camera in cameras)
             {
-                //if (camera.cameraType != CameraType.SceneView) return;
-                BeginCameraRendering(camera);
-                
-                m_resources.m_depth_normal.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 24);
-                m_resources.m_color.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 0);
+                if (camera.orthographic == true)
+                {
+                    Debug.LogError("Orthographic camera is not yet supported!");
+                    return;
+                }
 
-                m_PreZRenderer.Execute(ref renderContext, camera);
+                BeginCameraRendering(camera); ;
 
-                m_commonRenderer.Execute(ref renderContext, camera);
+                if (camera.cameraType == CameraType.SceneView)
+                    ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+
+                var resources = VRenderResourcesPool.Get(m_asset, camera.GetInstanceID());
+
+                resources.depth_normal.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 24);
+                resources.color.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 0);
+
+                var cullResults = new CullResults();
+                CullResults.Cull(camera, renderContext, out cullResults);
+
+                m_PreZRenderer.AllocateResources(resources);
+                m_PreZRenderer.Execute(ref renderContext, cullResults, camera);
+
+                m_commonRenderer.AllocateResources(resources);
+                m_commonRenderer.Execute(ref renderContext, cullResults, camera);
 
                 var cb_postprocess = CommandBufferPool.Get("Post");
 #if UNITY_EDITOR
-                VRPDebuger.ShowTexture(ref cb_postprocess, m_resources.m_depth_normal.data, camera.targetTexture, 0);
+                VRPDebuger.ShowTexture(ref cb_postprocess, resources.depth_normal.data, camera.targetTexture, 0);
+                VRPDebuger.ShowTextureArray(ref cb_postprocess, resources.shadowResources.m_PointShadowArray.data, camera.targetTexture, 0);
+                VRPDebuger.ShowTextureArray(ref cb_postprocess, resources.shadowResources.m_PointShadowArray.data, camera.targetTexture, 1);
 #endif
                 renderContext.ExecuteCommandBuffer(cb_postprocess);
                 CommandBufferPool.Release(cb_postprocess);
                 renderContext.Submit();
             }
+            VRenderResourcesPool.KeepAlive();
         }
 
         static private void SortCamera(ref Camera[] cameras)
