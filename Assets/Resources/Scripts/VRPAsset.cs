@@ -15,7 +15,7 @@ namespace vrp
         public float cascadeDistribution = 1.2f;
         [Min(256)]
         public uint directionalShadowResolution = 4096;
-        [Min(0)]
+        [Min(20)]
         public float shadowDistance = 50;
         [Header("Point Light")]
         [Min(128)]

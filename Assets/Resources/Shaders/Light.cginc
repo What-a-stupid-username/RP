@@ -50,7 +50,7 @@ float3 SampleLight_Dir(int cascade, Light light, float4 pos, float3 n, float3 t,
 				shadow_uv.y = -shadow_uv.y;
 				float2 uv = shadow_uv.xy / 2 + 0.5;
 				float z_cmp = SampleDirctionalShadow(light.others.x, uv)[cascade];
-				if (shadow_uv.z < z_cmp - 0.002) shadow += 1;
+				if (shadow_uv.z < z_cmp - 0.0001) shadow += 1;
 			}
 		}
 		shadow = 1 - shadow / 49;
@@ -89,7 +89,7 @@ float3 SampleLight_Point(Light light, float4 pos, float3 n, float3 t, float3 v) 
 				shadow_uv.y = -shadow_uv.y;
 				float2 uv = shadow_uv.xy / 2 + 0.5;
 				float z_cmp = SamplePointShadow(light.others.x, uv)[shadow_pass];
-				if (shadow_uv.z < z_cmp - 0.002) shadow += 1;
+				if (shadow_uv.z < z_cmp - 0.01) shadow += 1;
 			}
 		}
 		shadow = 1 - shadow / 49;

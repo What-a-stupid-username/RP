@@ -15,6 +15,6 @@ MonoBehaviour:
   cascadeNum: 4
   cascadeDistribution: 1.2
   directionalShadowResolution: 4096
-  shadowDistance: 50
-  pointShadowResolution: 512
+  shadowDistance: 100
+  pointShadowResolution: 1024
   enableTessellation: 1

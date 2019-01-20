@@ -232,16 +232,12 @@ namespace vrp
             setup_properties.SetGlobalInt("_MaxCascadeNum", m_asset.cascadeNum);
 
 
-            if (m_DirShadowArray.TestNeedModify((int)m_asset.directionalShadowResolution, (int)m_asset.directionalShadowResolution, dirlights.Count))
-            {
-                if (m_DirShadowArray.IsValid())
-                    setup_properties.SetGlobalTexture(shaderPropertyID.dirShadowArray, m_DirShadowArray.data);
-            }
-            if (m_shadowcascade_matrix_vp.TestNeedModify(dirlights.Count))
-            {
-                if (m_shadowcascade_matrix_vp.IsValid())
-                    setup_properties.SetGlobalBuffer(shaderPropertyID.shadowcascade_matrix_vp, m_shadowcascade_matrix_vp.data);
-            }
+            m_DirShadowArray.TestNeedModify((int)m_asset.directionalShadowResolution, (int)m_asset.directionalShadowResolution, dirlights.Count);
+            if (m_DirShadowArray.IsValid())
+                setup_properties.SetGlobalTexture(shaderPropertyID.dirShadowArray, m_DirShadowArray.data);
+            m_shadowcascade_matrix_vp.TestNeedModify(dirlights.Count);
+            if (m_shadowcascade_matrix_vp.IsValid())
+                setup_properties.SetGlobalBuffer(shaderPropertyID.shadowcascade_matrix_vp, m_shadowcascade_matrix_vp.data);
 
             var cb = CommandBufferPool.Get("Directional light shadowmap");
             List<ShadowCascadeMatrix> mts = new List<ShadowCascadeMatrix>();
@@ -259,7 +255,6 @@ namespace vrp
                 Matrix4x4[] mats_per_light = new Matrix4x4[4];
                 for (int j = 0; j < m_asset.cascadeNum; j++)
                 {
-                    
                     //correct the forward of the helper camera to light dir
                     helper_trans.forward = dir;
 
@@ -268,13 +263,6 @@ namespace vrp
                     helper.orthographicSize = bias[4] / 2;
                     helper.farClipPlane = bias[5] + m_asset.shadowDistance;
                     helper.aspect = bias[3] / bias[4];
-
-                    //Debug.DrawRay(helper_trans.position, helper_trans.right,Color.red);
-                    //Debug.DrawRay(helper_trans.position, helper_trans.forward, Color.blue);
-                    //Debug.DrawRay(helper_trans.position, helper_trans.up,Color.green);
-                    //if (camera.cameraType == CameraType.Game)
-                    //    VRPDebuger.DrawBB(helper_trans.localToWorldMatrix, - helper.orthographicSize * Vector3.right - helper.orthographicSize * Vector3.up * helper.aspect,
-                    //        helper.orthographicSize * Vector3.right + helper.orthographicSize * Vector3.up * helper.aspect + helper.farClipPlane * Vector3.forward, Color.yellow);
 
                     cb.ClearRenderTarget(true, false, Color.clear);
                     mats_per_light[j] = GL.GetGPUProjectionMatrix(helper.projectionMatrix, true) * helper.worldToCameraMatrix;                  
@@ -305,15 +293,14 @@ namespace vrp
 
         public ShadowResources(VRPAsset asset)
         {
-            //shaderPropertyID = new ShaderPropertyID();
             helper_ = new GameObject("");
             helper_.SetActive(false);
-            helper_.hideFlags = HideFlags.DontSave;//| HideFlags.HideInHierarchy;
+            helper_.hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy;
             helper = helper_.AddComponent<Camera>();
             helper.orthographic = true;
             helper.nearClipPlane = 0f;
             m_asset = asset;
-            m_DirShadowArray = new VRenderTextureArray("dir_shadow_array", RenderTextureFormat.ARGB32, true, false, true);
+            m_DirShadowArray = new VRenderTextureArray("dir_shadow_array", RenderTextureFormat.ARGB64, true, false, true);
             m_PointShadowArray = new VRenderTextureArray("point_shadow_array", RenderTextureFormat.RG32, true, false, true);
             m_shadowcascade_matrix_vp = new VComputeBuffer(256);
             m_pointLightMatrix = new VComputeBuffer(256);
