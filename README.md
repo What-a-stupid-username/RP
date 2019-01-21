@@ -4,11 +4,11 @@
 
 一个非常简单精简的自定义管线。
 
-![build-in](.\Pictures\build-in.png)
+![build-in](./Pictures/build-in.png)
 
 <center><font color=gray>build-in pipeline</font></center>
 
-![this](.\Pictures\this.jpg)
+![this](./Pictures/this.jpg)
 
 <center><font color=gray>this scriptable pipeline</font></center>
 
