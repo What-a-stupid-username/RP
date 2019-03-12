@@ -35,7 +35,7 @@ namespace vrp
         {
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, d);
             renderTextureDescriptor.msaaSamples = m_msaa;
-            renderTextureDescriptor.sRGB = !m_liner;
+            renderTextureDescriptor.sRGB = m_liner;
             data = new RenderTexture(renderTextureDescriptor);
             data.anisoLevel = 2;
             data.name = m_name;
@@ -43,7 +43,7 @@ namespace vrp
             data.Create();
         }
 
-        public VRenderTexture2D(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = false, bool msaa = false)
+        public VRenderTexture2D(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false)
         {
             m_name = name;
             m_format = textureFormat;
@@ -97,7 +97,7 @@ namespace vrp
             }
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format);
             renderTextureDescriptor.msaaSamples = m_msaa;
-            renderTextureDescriptor.sRGB = !m_liner;
+            renderTextureDescriptor.sRGB = m_liner;
             renderTextureDescriptor.dimension = TextureDimension.Tex2DArray;
             renderTextureDescriptor.volumeDepth = n;
             renderTextureDescriptor.depthBufferBits = 24;
@@ -108,7 +108,7 @@ namespace vrp
             data.Create();
         }
 
-        public VRenderTextureArray(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = false, bool msaa = false, bool shadowmap = false)
+        public VRenderTextureArray(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false, bool shadowmap = false)
         {
             m_name = name;
             m_format = textureFormat;

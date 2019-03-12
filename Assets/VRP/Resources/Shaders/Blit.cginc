@@ -1,3 +1,6 @@
+#ifndef VRP_BLIT_CGINC
+#define VRP_BLIT_CGINC
+
 struct appdata
 {
 	float4 vertex : POSITION;
@@ -27,3 +30,5 @@ fixed4 frag(v2f i) : SV_Target
 	fixed4 col = tex2D(_MainTex, i.uv * 5);
 	return col;
 }
+
+#endif

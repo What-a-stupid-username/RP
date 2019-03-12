@@ -12,9 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28e02f629d0cd85408d57d1fc6d3d247, type: 3}
   m_Name: NewVRPAsset
   m_EditorClassIdentifier: 
+  resources: {fileID: 11400000, guid: 1240521223b10864a8a8d6be14e34520, type: 2}
+  MASS: 1
+  shadowDistance: 50
   cascadeNum: 4
   cascadeDistribution: 1.2
   directionalShadowResolution: 4096
-  shadowDistance: 100
   pointShadowResolution: 1024
   enableTessellation: 1
+  maxDistanceOfIndirectLight: 10
+  enableFrustumGI: 1
+  frustumGIDensity: 1
+  distributionDistanceFromCamera: 10
+  enableGloablGI: 0
+  updatGIInRealtime: 0
