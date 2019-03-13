@@ -50,7 +50,7 @@ float4 ComplexPBS(SurfaceInfo IN, float3 viewDir) {
 			lightSatu = SampleLight_Spot(light, worldPos, normal, tangent);
 			lightDir = normalize(light.pos_type.xyz - worldPos);
 		}
-		color += lightSatu;// BRDFLight(baseColor, specColor, IN.smoothness, normal, viewDir, lightDir, lightSatu);
+		color += BRDFLight(baseColor, specColor, IN.smoothness, normal, viewDir, lightDir, lightSatu);
 	}
 
 	//todo:

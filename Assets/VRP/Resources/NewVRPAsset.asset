@@ -17,8 +17,8 @@ MonoBehaviour:
   shadowDistance: 50
   cascadeNum: 4
   cascadeDistribution: 1.2
-  directionalShadowResolution: 4096
-  pointShadowResolution: 1024
+  directionalShadowResolution: 1024
+  pointShadowResolution: 512
   enableTessellation: 1
   maxDistanceOfIndirectLight: 10
   enableFrustumGI: 1

@@ -56,34 +56,15 @@ float3 SampleLight_Dir(int cascade, Light light, float4 pos, float3 n, float3 t)
 		float3 biot = cross(n, t);
 		float4x4 shadow_mat = _Shadowcascade_matrix_vp[light.others.x].mats[cascade];
 		float visibility = 0;
-		float bias = max(0.0005 * (1.0 - dot(n, light.pos_type.xyz)), 0.0005);
+		float bias = max(0.002 * (1.0 - dot(n, light.pos_type.xyz)), 0.002);
 		float2 ati = 1;
 		ati.x = 0.25+abs(dot(t, light.pos_type.xyz));
 		ati.y = 0.25+abs(dot(biot, light.pos_type.xyz));
 		ati = normalize(ati);
 
 		float2 noise = Rand(pos.xyz);
-		float distance = 0;
-		{
-			float ws = 1;
-			float tp = 0;
-			for (int i = 0; i < SAMPLE_DISK_SIZE; i++) {
-				float2 offset = RandOffset(i, noise) * ati * (1 + cascade * 0.4) * (100+tp*10);
-				float4 shadow_uv = mul(shadow_mat, pos + 0.01 * float4(t * offset.x + biot * offset.y, 0)); shadow_uv /= shadow_uv.w;
-				shadow_uv.y = -shadow_uv.y;
-				float2 uv = shadow_uv.xy / 2 + 0.5;
-				float z_cmp = SampleDirctionalShadow(light.others.x, uv)[cascade];
-				if (shadow_uv.z < z_cmp - bias) {
-					tp = z_cmp - shadow_uv.z;
-					distance += tp;
-					ws++;
-				}
-				if (ws > 8) break;
-			}
-			distance /= ws;
-		}
 		for (int i = 0; i < SAMPLE_DISK_SIZE; i++) {
-			float2 offset = RandOffset(i, noise) * ati * (1+ cascade * 0.4) * (distance*10 + 0.05);
+			float2 offset = RandOffset(i, noise) * ati * 0.2;
 			float4 shadow_uv = mul(shadow_mat, pos + float4(t * offset.x + biot * offset.y, 0)); shadow_uv /= shadow_uv.w;
 			shadow_uv.y = -shadow_uv.y;
 			float2 uv = shadow_uv.xy / 2 + 0.5;
@@ -92,7 +73,6 @@ float3 SampleLight_Dir(int cascade, Light light, float4 pos, float3 n, float3 t)
 		}
 		visibility = visibility / SAMPLE_DISK_SIZE;
 		light_contri *= visibility;
-		return visibility;
 	}
 	return light_contri;
 }
@@ -122,35 +102,36 @@ float3 SampleLight_Point(Light light, float4 pos, float3 n, float3 t) {
 	float3 delta = light.pos_type - pos;
 	float distance = length(delta);
 	if (distance > light.geometry.w) return 0;
+	float bias = max(0.004 * (1.0 - dot(n, light.pos_type.xyz)), 0.004);
 	float3 l = delta / distance;
 	float satu = saturate(1 - distance / light.geometry.w);
 	float3 light_contri = satu * light.color.rgb * light.color.w;
 
+	float2 noise = Rand(pos.xyz);
 	if (light.others.x != -1) {
 		float3 biot = cross(n, t); biot *= 0.01; t *= 0.01;
 		ShadowMatrix shadow_mat = _PointLightMatrixArray[light.others.x];
 		float4x4 mat0 = shadow_mat.mats[0], mat1 = shadow_mat.mats[1];
-		float shadow = 0;
-		for (int i = -3; i <= 3; i++) {
-			for (int j = -3; j <= 3; j++) {
-				float4 shadow_uv = mul(mat0, pos + float4(t * i + biot * j, 0)); shadow_uv.w = 1;
-				int shadow_pass = step(0, shadow_uv.z);
-				shadow_uv.xz *= -2 * shadow_pass + 1;
-				float z = length(shadow_uv.xyz);
-				shadow_uv.xyz = normalize(shadow_uv.xyz);
-				shadow_uv.xy /= -shadow_uv.z + 1;
+		float visibility = 0;
+		for (int i = 0; i < SAMPLE_DISK_SIZE; i++) {
+			float2 offset = RandOffset(i, noise)*10;
+			float4 shadow_uv = mul(mat0, pos); shadow_uv.w = 1;
+			int shadow_pass = step(0, shadow_uv.z);
+			shadow_uv.xz *= -2 * shadow_pass + 1;
+			float z = length(shadow_uv.xyz);
+			shadow_uv.xyz = normalize(shadow_uv.xyz);
+			shadow_uv.xy /= -shadow_uv.z + 1;
 
-				shadow_uv.xy *= 2 * light.geometry.w;
-				shadow_uv.z = -z;
-				shadow_uv = mul(mat1, shadow_uv); shadow_uv /= shadow_uv.w;
-				shadow_uv.y = -shadow_uv.y;
-				float2 uv = shadow_uv.xy / 2 + 0.5;
-				float z_cmp = SamplePointShadow(light.others.x, uv)[shadow_pass];
-				if (shadow_uv.z < z_cmp - 0.01) shadow += 1;
-			}
+			shadow_uv.xy *= 2 * light.geometry.w;
+			shadow_uv.z = -z;
+			shadow_uv = mul(mat1, shadow_uv); shadow_uv /= shadow_uv.w;
+			shadow_uv.y = -shadow_uv.y;
+			float2 uv = shadow_uv.xy / 2 + 0.5;
+			float z_cmp = SamplePointShadow(light.others.x, uv + offset/2000)[shadow_pass];
+				if (shadow_uv.z > z_cmp - bias) visibility += 1;
 		}
-		shadow = 1 - shadow / 49;
-		light_contri *= shadow;
+		visibility = visibility / SAMPLE_DISK_SIZE;
+		light_contri *= visibility;
 	}
 
 
