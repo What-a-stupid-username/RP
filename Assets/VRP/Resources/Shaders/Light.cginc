@@ -56,7 +56,7 @@ float3 SampleLight_Dir(int cascade, Light light, float4 pos, float3 n, float3 t)
 		float3 biot = cross(n, t);
 		float4x4 shadow_mat = _Shadowcascade_matrix_vp[light.others.x].mats[cascade];
 		float visibility = 0;
-		float bias = max(0.002 * (1.0 - dot(n, light.pos_type.xyz)), 0.002);
+		float bias = min(0.002 * (1.0 - dot(n, light.pos_type.xyz)), 0.002);
 		float2 ati = 1;
 		ati.x = 0.25+abs(dot(t, light.pos_type.xyz));
 		ati.y = 0.25+abs(dot(biot, light.pos_type.xyz));
@@ -88,7 +88,7 @@ float3 SampleLight_Dir_Simple(int cascade, Light light, float4 pos) {
 		shadow_uv.y = -shadow_uv.y;
 		float2 uv = shadow_uv.xy / 2 + 0.5;
 		float z_cmp = SampleDirctionalShadow(light.others.x, uv)[cascade];
-		if (shadow_uv.z < z_cmp - 0.0001) shadow = 0;
+		if (shadow_uv.z < z_cmp - 0.00025) shadow = 0;
 
 		light_contri *= shadow;
 	}
@@ -102,8 +102,8 @@ float3 SampleLight_Point(Light light, float4 pos, float3 n, float3 t) {
 	float3 delta = light.pos_type - pos;
 	float distance = length(delta);
 	if (distance > light.geometry.w) return 0;
-	float bias = max(0.004 * (1.0 - dot(n, light.pos_type.xyz)), 0.004);
 	float3 l = delta / distance;
+	float bias = (0.04 * (1.0 - saturate(dot(n, l))) + 0.04) / clamp(light.geometry.w,0.01,100);
 	float satu = saturate(1 - distance / light.geometry.w);
 	float3 light_contri = satu * light.color.rgb * light.color.w;
 
@@ -165,7 +165,7 @@ float3 SampleLight_Point_Simple(Light light, float4 pos) {
 		shadow_uv.y = -shadow_uv.y;
 		float2 uv = shadow_uv.xy / 2 + 0.5;
 		float z_cmp = SamplePointShadow(light.others.x, uv)[shadow_pass];
-		if (shadow_uv.z < z_cmp - 0.01) shadow = 0;
+		if (shadow_uv.z < z_cmp - 0.0005) shadow = 0;
 
 		light_contri *= shadow;
 	}

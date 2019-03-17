@@ -25,32 +25,32 @@ namespace vrp
                 GraphicsSettings.renderPipelineAsset = null;
             }
         }
-        public static void DrawBB(Matrix4x4 mat, Vector3 bbmin, Vector3 bbmax, Color color)
+        public static void DrawBB(Matrix4x4 mat, Vector3 bbmin, Vector3 bbmax, Color color, float time = 10)
         {
             Vector4 a = bbmin, b = new Vector4(bbmin.x, bbmin.y, bbmax.z),
                     c = new Vector4(bbmin.x, bbmax.y, bbmax.z), d = new Vector4(bbmin.x, bbmax.y, bbmin.z);
             Vector4 e = new Vector4(bbmax.x, bbmin.y, bbmin.z), f = new Vector4(bbmax.x, bbmin.y, bbmax.z),
                     g = bbmax, h = new Vector4(bbmax.x, bbmax.y, bbmin.z);
             a.w = 1; b.w = 1; c.w = 1; d.w = 1; e.w = 1; f.w = 1; g.w = 1; h.w = 1;
-            Draw8Points(mat * a, mat * b, mat * c, mat * d, mat * e, mat * f, mat * g, mat * h, color);
+            Draw8Points(mat * a, mat * b, mat * c, mat * d, mat * e, mat * f, mat * g, mat * h, color, time);
         }
         public static void Draw8Points(Vector4 a, Vector4 b, Vector4 c, Vector4 d,
                                 Vector4 e, Vector4 f, Vector4 g, Vector4 h,
-                                Color color)
+                                Color color, float time = 10)
         {
-            Draw4Points(a, b, c, d, color);
-            Draw4Points(e, f, g, h, color);
-            Draw4Points(a, b, f, e, color);
-            Draw4Points(b, c, g, f, color);
-            Draw4Points(c, d, h, g, color);
-            Draw4Points(d, a, e, h, color);
+            Draw4Points(a, b, c, d, color, time);
+            Draw4Points(e, f, g, h, color, time);
+            Draw4Points(a, b, f, e, color, time);
+            Draw4Points(b, c, g, f, color, time);
+            Draw4Points(c, d, h, g, color, time);
+            Draw4Points(d, a, e, h, color, time);
         }
-        public static void Draw4Points(Vector4 a, Vector4 b, Vector4 c, Vector4 d, Color color)
+        public static void Draw4Points(Vector4 a, Vector4 b, Vector4 c, Vector4 d, Color color, float time = 10)
         {
-            Debug.DrawLine(a, b, color);
-            Debug.DrawLine(b, c, color);
-            Debug.DrawLine(c, d, color);
-            Debug.DrawLine(d, a, color);
+            Debug.DrawLine(a, b, color, time);
+            Debug.DrawLine(b, c, color, time);
+            Debug.DrawLine(c, d, color, time);
+            Debug.DrawLine(d, a, color, time);
         }
 
         public static void ShowTexture(ref CommandBuffer cb, Texture texture, RenderTargetIdentifier target, int pos = 0)

@@ -9,19 +9,18 @@ public class VRP_GI_SH : MonoBehaviour
     RenderTexture rt_;
     public void Init(RenderTexture rt)
     {
-        if (rt == null) rt = new RenderTexture(256, 256, 24);
         rt_ = rt;
         self_camera = GetComponent<Camera>();
         self_camera.enabled = false;
         self_camera.targetTexture = rt_;
-        Shader shader = Shader.Find("VRP/bake");
-        self_camera.SetReplacementShader(shader, "RenderType");
         self_camera.name = "GI Baker";
+        self_camera.allowHDR = true;
     }
 
     public void Draw()
     {
-        self_camera.Render();
+        self_camera.RenderToCubemap(rt_);
+        rt_.GenerateMips();
     }
 
 

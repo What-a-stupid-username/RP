@@ -63,7 +63,7 @@
 
 					float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 
-					return 1; SimplePBS(IN, viewDir);
+					return SimplePBS(IN, viewDir);
 				}
 			ENDCG
 		}

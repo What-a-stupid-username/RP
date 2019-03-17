@@ -1,0 +1,57 @@
+﻿#pragma kernel CubeMap2SH
+
+
+#include "SH.cginc"
+#include "Montcalo_Library.hlsl"
+
+TextureCube<float3> CubeMap; 
+SamplerState samplerCubeMap;
+
+RWStructuredBuffer<int3> output;
+
+StructuredBuffer<float3> dirs;
+
+[numthreads(1024, 1, 1)]
+void CubeMap2SH(uint3 id : SV_DispatchThreadID)
+{
+	float3 dir = dirs[id.x];
+
+	uint3 p1 = ReverseBits32(asuint(dir.xy));
+	uint2 p2 = (abs(dir.z) > abs(dir.y)) ? p1.zx : p1.zy;
+	p2 = (p2 << 16) | (p2 >> 16);
+	p2 = ((p2 & 0x33333333) << 2) | ((p2 & 0xcccccccc) >> 2);
+	p2 = ((p2 & 0x0f0f0f0f) << 4) | ((p2 & 0xf0f0f0f0) >> 4);
+	uint2 p = p1.xy + p2;
+
+	float3 radians = 0;
+	float3 tangent = 0; 
+	if (abs(dir.y) > 0.7) {
+		tangent = cross(float3(0, 0, 1), dir);
+	}
+	else {
+		tangent = cross(float3(0, 1, 0), dir);
+	}
+	float3 bi = cross(tangent, dir);
+
+	half3x3 TangentToWorld = half3x3(tangent, bi, dir);
+
+	for (int i = 0; i < 8; i++)
+	{
+		float2 random = Hammersley(i, 8, p);
+		float3 v = mul(CosineSampleHemisphere(random).xyz, TangentToWorld);
+		radians += CubeMap.SampleLevel(samplerCubeMap, v, 0);
+	}
+	radians /= 8;
+	radians *= 10000;
+
+	SH9 sh = SHCosineLobe(dir);
+
+	[unroll]
+	for (uint i = 0; i < 9; ++i)
+	{
+		int3 value = (int3)(sh.c[i] * radians);
+		InterlockedAdd(output[i].x, value.x);
+		InterlockedAdd(output[i].y, value.y);
+		InterlockedAdd(output[i].z, value.z);
+	}
+}

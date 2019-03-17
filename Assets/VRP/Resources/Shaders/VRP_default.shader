@@ -272,10 +272,10 @@
 		//bake
 		Pass{
 			Name "VRPBAKE"
-			Tags { "LightMode" = "VRPBAKE" }
+			Tags { "LightMode" = "VRP_BAKE" }
 
 			ZTest on
-			ZWrite off
+			ZWrite on
 
 			CGPROGRAM
 				#pragma vertex vert

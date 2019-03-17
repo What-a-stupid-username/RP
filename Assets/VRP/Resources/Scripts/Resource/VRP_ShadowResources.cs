@@ -322,10 +322,14 @@ namespace vrp
         }
         public void Dispose()
         {
+#if UNITY_EDITOR
             UnityEditor.EditorApplication.delayCall += () =>
             {
                 GameObject.DestroyImmediate(helper_);
             };
+#else
+             GameObject.Destroy(helper_);
+#endif
             m_DirShadowArray.Dispose();
             m_PointShadowArray.Dispose();
             m_shadowcascade_matrix_vp.Dispose();

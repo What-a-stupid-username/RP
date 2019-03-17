@@ -59,12 +59,20 @@ namespace vrp
         }
     }
 
+    public class LightRecord
+    {
+        float UpdateTime;
+        int id;
+        int index;
+    }
+
     public class VRenderResourcesPool
     {
 
         private static readonly VRenderResourcesPool instance = new VRenderResourcesPool();
         private Dictionary<int, VRenderResources> m_LookupTable;
         Dictionary<int, int> m_CameraTable;
+        Dictionary<int, LightRecord> m_lightTable;
 
         VRenderResourcesPool()
         {
@@ -120,6 +128,15 @@ namespace vrp
             }
             instance.m_LookupTable.Clear();
             instance.m_CameraTable.Clear();
+        }
+
+        public static void RecordLight(int id, int index)
+        {
+            Debug.Log(Time.time);
+        }
+        public static void SearchLight(int id, int index)
+        {
+            Debug.Log(Time.time);
         }
     }
 }

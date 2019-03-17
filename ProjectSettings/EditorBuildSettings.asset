@@ -8,4 +8,7 @@ EditorBuildSettings:
   - enabled: 0
     path: 
     guid: 00000000000000000000000000000000
+  - enabled: 1
+    path: Assets/VRP/New Scene.unity
+    guid: 8497986c9d028384e9d9dea415d1c86c
   m_configObjects: {}
