@@ -35,13 +35,13 @@ void CubeMap2SH(uint3 id : SV_DispatchThreadID)
 
 	half3x3 TangentToWorld = half3x3(tangent, bi, dir);
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 128; i++)
 	{
-		float2 random = Hammersley(i, 8, p);
-		float3 v = mul(CosineSampleHemisphere(random).xyz, TangentToWorld);
+		float2 random = Hammersley(i, 128, p);
+		float3 v = mul(UniformSampleHemisphere(random).xyz, TangentToWorld);
 		radians += CubeMap.SampleLevel(samplerCubeMap, v, 0);
 	}
-	radians /= 8;
+	radians /= 128;
 	radians *= 10000;
 
 	SH9 sh = SHCosineLobe(dir);

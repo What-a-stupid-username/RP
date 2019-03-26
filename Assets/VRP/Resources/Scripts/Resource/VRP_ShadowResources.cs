@@ -44,7 +44,7 @@ namespace vrp
 
 
         GameObject helper_;
-        Camera helper;
+        public Camera helper;
         
         public VRenderTextureArray m_DirShadowArray;
         public VRenderTextureArray m_PointShadowArray;
@@ -152,7 +152,7 @@ namespace vrp
             }
         }
 
-        public void UpdatePointLights(ref ScriptableRenderContext renderContext, List<Light> plights, Camera camera, ref CommandBuffer setup_properties)
+        public void UpdatePointLights(ref Dictionary<Light, int> light_table, ref ScriptableRenderContext renderContext, List<Light> plights, Camera camera, ref CommandBuffer setup_properties)
         {
             //todo: now will update every light for every camera, which is not totally necessary.
             if (helper_ == null) return;
@@ -176,6 +176,8 @@ namespace vrp
             for (int i = 0; i < plights.Count; i++)
             {
                 var light = plights[i];
+                light_table[light] = i;
+
                 helper_trans.position = light.transform.position;
                 helper.orthographicSize = light.range * 2;
                 helper.farClipPlane = light.range;
@@ -229,9 +231,10 @@ namespace vrp
             m_pointLightMatrix.data.SetData(light_mats);
         }
 
-        public void UpdateDirectionalLights(ref ScriptableRenderContext renderContext, List<Light> dirlights, Camera camera, ref CommandBuffer setup_properties)
+        public void UpdateDirectionalLights(ref Dictionary<Light, int> light_table, ref ScriptableRenderContext renderContext, List<Light> dirlights, Camera camera, ref CommandBuffer setup_properties)
         {
             if (helper_ == null) return;
+            light_table.Clear();
             helper.name = camera.name + "_helper";
             if (dirlights.Count == 0) return;
             Transform helper_trans = helper_.transform;
@@ -259,6 +262,7 @@ namespace vrp
             for (int i = 0; i < dirlights.Count; i++)
             {
                 var light = dirlights[i];
+                light_table[light] = i;
 
                 Matrix4x4 l2w = light.transform.localToWorldMatrix;
                 Vector4 dir = new Vector4(l2w.m02, l2w.m12, l2w.m22, 0);
@@ -314,6 +318,7 @@ namespace vrp
             helper = helper_.AddComponent<Camera>();
             helper.orthographic = true;
             helper.nearClipPlane = 0f;
+            helper.enabled = false;
             m_asset = asset;
             m_DirShadowArray = new VRenderTextureArray("dir_shadow_array", RenderTextureFormat.ARGB64, true, false, true);
             m_PointShadowArray = new VRenderTextureArray("point_shadow_array", RenderTextureFormat.RG32, true, false, true);

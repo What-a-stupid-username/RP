@@ -1,4 +1,4 @@
-﻿Shader "VRP/Test_SH"
+﻿Shader "VRP/Test_SH_One"
 {
 	Properties
 	{
@@ -14,9 +14,10 @@
 
 			//render pass
 			Pass{
+				Tags {"LightMode" = "VRP_BASE"}
+
 				ZTest on
 				ZWrite on
-				Blend SrcAlpha OneMinusSrcAlpha
 
 				CGPROGRAM
 					#pragma vertex vert
@@ -34,21 +35,21 @@
 						float4 pos : SV_POSITION;
 						float3 shColor : TEXCOOD1;
 					};
-					StructuredBuffer<float4> posBuffer;
-					StructuredBuffer<float4> shBuffer;
-					v2f vert(a2v i, uint instanceID : SV_InstanceID) {
+
+					StructuredBuffer<float3> SH_COEFF;
+
+					v2f vert(a2v i) {
 						v2f o;
-						float4 vert = i.vert / 4 + posBuffer[instanceID];
-						vert.w = 1;
-						o.pos = mul(UNITY_MATRIX_VP, vert);
+						o.pos = UnityObjectToClipPos(i.vert);
+
 						float3 normal = i.normal;
 
 						SH9 sh = SHCosineLobe(normal);
 						float3 res = 0;
-						for (int j = 0; j < 9; j++)
+						for (int i = 0; i < 9; i++)
 						{
-							float c = sh.c[j];
-							float3 co = shBuffer[instanceID*9+j];
+							float c = sh.c[i];
+							float3 co = SH_COEFF[i];
 							res += c * co;
 						}
 						o.shColor = res;
@@ -61,7 +62,7 @@
 					float _Glossiness;
 
 					float4 frag(v2f i) : SV_TARGET{
-						return float4(i.shColor, 0.7);
+						return float4(i.shColor, 1);
 					}
 				ENDCG
 			}

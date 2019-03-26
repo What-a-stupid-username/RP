@@ -7,11 +7,11 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: VRP_Test_SH
-  m_Shader: {fileID: 4800000, guid: cb6961c9626e3f74ab278ebf863a8b55, type: 3}
+  m_Name: VRP_Test_SH_One
+  m_Shader: {fileID: 4800000, guid: 3137526645f1ea64f88306c168f7f94b, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 1
+  m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}

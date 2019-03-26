@@ -5,6 +5,7 @@
 #include "UnityCG.cginc"
 #include "Light.cginc"
 #include "PBR.cginc"
+#include "GI.cginc"
 
 struct SurfaceInfo {
 	float3 baseColor;
@@ -16,9 +17,6 @@ struct SurfaceInfo {
 	float4 worldPos;
 	float z;
 };
-
-
-
 
 float4 ComplexPBS(SurfaceInfo IN, float3 viewDir) {
 	float3 color = 0;
@@ -54,7 +52,11 @@ float4 ComplexPBS(SurfaceInfo IN, float3 viewDir) {
 	}
 
 	//todo:
-	//color += BRDFGI(baseColor, specColor, oneMinusReflectivity, IN.smoothness, normal, viewDir, 0.05, 0);
+#ifdef _Enable_B_GI
+	float3 diffuse_light = GI_Diffuse(worldPos, normal);
+	//return float4(diffuse_light, 1);
+	color += BRDFGI(baseColor, specColor, oneMinusReflectivity, IN.smoothness, normal, viewDir, diffuse_light, 0.1);
+#endif
 
 	return  float4(color, outputAlpha);
 }

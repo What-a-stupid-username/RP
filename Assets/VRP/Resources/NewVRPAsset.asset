@@ -21,8 +21,9 @@ MonoBehaviour:
   pointShadowResolution: 1024
   enableTessellation: 1
   maxDistanceOfIndirectLight: 10
-  enableFrustumGI: 1
-  frustumGIDensity: 1
-  distributionDistanceFromCamera: 10
-  enableGloablGI: 0
+  enableRealtimeGI: 1
+  realtimeGIDensity: 64
+  distributionDistanceFromCamera: 50
+  updateWholeInFrames: 10
+  enableBakedGI: 1
   updatGIInRealtime: 0

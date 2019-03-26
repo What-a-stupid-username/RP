@@ -4,6 +4,7 @@ using UnityEngine.Experimental.Rendering;
 using System;
 using System.Collections.Generic;
 using UnityEngine.Profiling;
+using System.Linq;
 
 namespace vrp
 {
@@ -12,18 +13,22 @@ namespace vrp
     {
         private readonly VRPAsset m_asset;
         
-        PreZRenderer m_PreZRenderer;
+        PreZRenderer m_preZRenderer;
+        LightRenderer m_lightRenderer;
         CommonRenderer m_commonRenderer;
         BakeRenderer m_bakeRenderer;
+        GIRenderer m_giRenderer;
 
 
         public VRP(VRPAsset asset)
         {
             m_asset = asset;
             
-            m_PreZRenderer = new PreZRenderer();
+            m_preZRenderer = new PreZRenderer();
+            m_lightRenderer = new LightRenderer();
             m_commonRenderer = new CommonRenderer();
             m_bakeRenderer = new BakeRenderer();
+            m_giRenderer = new GIRenderer();
         }
 
         public override void Dispose()
@@ -32,9 +37,11 @@ namespace vrp
 
             VRenderResourcesPool.Dispose();
 
-            m_PreZRenderer.Dispose();
+            m_preZRenderer.Dispose();
+            m_lightRenderer.Dispose();
             m_commonRenderer.Dispose();
             m_bakeRenderer.Dispose();
+            m_giRenderer.Dispose();
         }
 
         public override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
@@ -52,6 +59,8 @@ namespace vrp
                     Debug.LogError("Orthographic camera is not yet supported!");
                     return;
                 }
+                //if (camera.cameraType != CameraType.Game) return;
+                //Debug.Log(camera.name);
 
                 BeginCameraRendering(camera);
 
@@ -62,28 +71,62 @@ namespace vrp
 
                 var resources = VRenderResourcesPool.Get(m_asset, camera.GetInstanceID());
 
-                resources.depth_normal.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 24);
-                resources.color.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 0);
+                resources.depth_normal.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 0);
+                resources.color.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 24);
 
-                var cullResults = new CullResults();
-                CullResults.Cull(camera, renderContext, out cullResults);
+
 
 
 
 #if UNITY_EDITOR
                 if (camera.name == "GI Baker")
                 {
+                    var cullResults = new CullResults();
+                    CullResults.Cull(camera, renderContext, out cullResults);
+
                     m_bakeRenderer.AllocateResources(resources);
                     m_bakeRenderer.Execute(ref renderContext, cullResults, camera);
                 }
                 else
                 {
 #endif
-                    m_PreZRenderer.AllocateResources(resources);
-                    m_PreZRenderer.Execute(ref renderContext, cullResults, camera);
+                    {
+                        var giCullResult = new CullResults();
+                        var helper = resources.shadowResources.helper;
+                        helper.aspect = 1;
+                        helper.transform.up = Vector3.up;
+                        helper.transform.position = camera.transform.position;
+                        helper.orthographicSize = m_asset.distributionDistanceFromCamera * 2;
+                        helper.farClipPlane = m_asset.distributionDistanceFromCamera;
+                        CullResults.Cull(helper, renderContext, out giCullResult);
+                        
+                        var commonCullResults = new CullResults();
+                        CullResults.Cull(camera, renderContext, out commonCullResults);
 
-                    m_commonRenderer.AllocateResources(resources);
-                    m_commonRenderer.Execute(ref renderContext, cullResults, camera);
+                        List<Light> totalight = new List<Light>();
+                        {
+                            foreach (var light in commonCullResults.visibleLights)
+                                totalight.Add(light.light);
+                            foreach (var light in giCullResult.visibleLights)
+                                totalight.Add(light.light);
+                            totalight = totalight.Distinct().ToList();
+                        }
+
+                        m_lightRenderer.AllocateResources(resources);
+                        m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
+
+
+                        m_lightRenderer.PrepareLightBuffer(giCullResult.visibleLights);
+                        m_giRenderer.AllocateResources(resources);
+                        m_giRenderer.Execute(ref renderContext, giCullResult, camera);
+
+                        m_preZRenderer.AllocateResources(resources);
+                        m_preZRenderer.Execute(ref renderContext, commonCullResults, camera);
+
+                        m_lightRenderer.PrepareLightBuffer(commonCullResults.visibleLights);
+                        m_commonRenderer.AllocateResources(resources);
+                        m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
+                    }
 #if UNITY_EDITOR
                 }
 #endif
@@ -93,12 +136,28 @@ namespace vrp
 #if UNITY_EDITOR
                 if (camera.name != "GI Baker")
                 {
-                    VRPDebuger.ShowTexture(ref cb_postprocess, resources.depth_normal.data, camera.targetTexture, 0);
-                    VRPDebuger.ShowTextureArray(ref cb_postprocess, resources.shadowResources.m_DirShadowArray.data, camera.targetTexture, 0);
+                    VRPDebuger.ShowTexture(ref cb_postprocess, resources.depth_normal.data, resources.color.data, 0);
+                    VRPDebuger.ShowTextureArray(ref cb_postprocess, resources.shadowResources.m_DirShadowArray.data, resources.color.data, 0);
+                }
+                try
+                {
+                    renderContext.ExecuteCommandBuffer(GameObject.Find("GI SH").GetComponent<Scene_SH>().cb);
+                }
+                catch (Exception) {}
+#endif
+
+#if UNITY_EDITOR
+                if (camera.name != "GI Baker")
+                {
+#endif
+                    cb_postprocess.Blit(resources.color.data, camera.targetTexture);
+#if UNITY_EDITOR
                 }
 #endif
+
                 renderContext.ExecuteCommandBuffer(cb_postprocess);
                 CommandBufferPool.Release(cb_postprocess);
+
                 renderContext.Submit();
             }
             VRenderResourcesPool.KeepAlive();

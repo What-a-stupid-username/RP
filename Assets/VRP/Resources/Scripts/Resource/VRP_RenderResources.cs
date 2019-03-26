@@ -16,6 +16,7 @@ namespace vrp
 
         public LightResources lightResources;
         public ShadowResources shadowResources;
+        public GIResources giResources;
 
         //use this to setup per camera properties, will be excute before opaque shade.
         public CommandBuffer setup_per_camera_properties;
@@ -41,6 +42,7 @@ namespace vrp
 
             lightResources = new LightResources();
             shadowResources = new ShadowResources(asset);
+            giResources = new GIResources(asset);
 
             materials = new VMaterials();
 
@@ -54,16 +56,10 @@ namespace vrp
 
             lightResources.Dispose();
             shadowResources.Dispose();
+            giResources.Dispose();
 
             CommandBufferPool.Release(setup_per_camera_properties);
         }
-    }
-
-    public class LightRecord
-    {
-        float UpdateTime;
-        int id;
-        int index;
     }
 
     public class VRenderResourcesPool
@@ -72,7 +68,6 @@ namespace vrp
         private static readonly VRenderResourcesPool instance = new VRenderResourcesPool();
         private Dictionary<int, VRenderResources> m_LookupTable;
         Dictionary<int, int> m_CameraTable;
-        Dictionary<int, LightRecord> m_lightTable;
 
         VRenderResourcesPool()
         {
@@ -128,15 +123,6 @@ namespace vrp
             }
             instance.m_LookupTable.Clear();
             instance.m_CameraTable.Clear();
-        }
-
-        public static void RecordLight(int id, int index)
-        {
-            Debug.Log(Time.time);
-        }
-        public static void SearchLight(int id, int index)
-        {
-            Debug.Log(Time.time);
         }
     }
 }

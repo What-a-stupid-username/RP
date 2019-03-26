@@ -69,22 +69,51 @@ namespace vrp
         bool m_liner;
         int m_msaa;
         bool m_shadowmap;
-        public bool TestNeedModify(int w, int h, int n)
+        public bool TestNeedModify(int w, int h, int n, bool copy_old_to_new = false/*unfinished*/)
         {
-            if (data != null && data.IsCreated())
+            if (copy_old_to_new)
             {
-                if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                if (data != null && data.IsCreated())
                 {
-                    data.Release();
+                    if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                    {
+                        var old_data = data;
+                        New(w, h, n);
+
+                        //int min_size = n < old_data.volumeDepth ? n : old_data.volumeDepth;
+                        //for (int i = 0; i < n; i++)
+                        //{
+                        //    Graphics.Blit(old_data, data);
+                        //}
+
+                        old_data.Release();
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
                     New(w, h, n);
                     return true;
                 }
-                return false;
             }
             else
             {
-                New(w, h, n);
-                return true;
+                if (data != null && data.IsCreated())
+                {
+                    if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                    {
+                        data.Release();
+                        New(w, h, n);
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    New(w, h, n);
+                    return true;
+                }
             }
         }
 
@@ -120,6 +149,66 @@ namespace vrp
         public bool IsValid()
         {
             return data != null && data.IsCreated();
+        }
+
+        public void Dispose()
+        {
+            if (data != null && data.IsCreated())
+            {
+                data.Release();
+            }
+        }
+
+        public RenderTexture data { get; private set; }
+    }
+
+    public class VRenderTextureCube
+    {
+        string m_name;
+        RenderTextureFormat m_format;
+        bool m_liner;
+        int m_msaa;
+        public bool TestNeedModify(int w, int h, int d)
+        {
+            if (data != null && data.IsCreated())
+            {
+                if (data.width != w || data.height != h || data.depth != d)
+                {
+                    data.Release();
+                    New(w, h, d);
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                New(w, h, d);
+                return true;
+            }
+        }
+
+        void New(int w, int h, int d)
+        {
+            RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, 0);
+            renderTextureDescriptor.msaaSamples = m_msaa;
+            renderTextureDescriptor.dimension = TextureDimension.Tex3D;
+            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.volumeDepth = d;
+            renderTextureDescriptor.depthBufferBits = 0;
+            renderTextureDescriptor.enableRandomWrite = true;
+            data = new RenderTexture(renderTextureDescriptor);
+            data.anisoLevel = 2;
+            data.name = m_name;
+
+            data.Create();
+        }
+
+        public VRenderTextureCube(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false)
+        {
+            m_name = name;
+            m_format = textureFormat;
+            m_liner = liner;
+            m_msaa = msaa ? 8 : 1;
         }
 
         public void Dispose()

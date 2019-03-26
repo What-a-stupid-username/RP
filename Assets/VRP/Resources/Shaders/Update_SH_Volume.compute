@@ -1,0 +1,95 @@
+﻿#pragma kernel Update
+#pragma kernel Clear
+#pragma kernel Fill
+
+#include "SH.cginc"
+
+Texture3D<float4> _old0;
+SamplerState sampler_old0;
+
+Texture3D<float4> _old1;
+SamplerState sampler_old1;
+
+Texture3D<float4> _old2;
+SamplerState sampler_old2;
+
+Texture3D<float4> _old3;
+SamplerState sampler_old3;
+
+Texture3D<float4> _old4;
+SamplerState sampler_old4;
+
+Texture3D<float4> _old5;
+SamplerState sampler_old5;
+
+Texture3D<float4> _old6;
+SamplerState sampler_old6;
+
+RWTexture3D<float4> _new0;
+RWTexture3D<float4> _new1;
+RWTexture3D<float4> _new2;
+RWTexture3D<float4> _new3;
+RWTexture3D<float4> _new4;
+RWTexture3D<float4> _new5;
+RWTexture3D<float4> _new6;
+
+float4 _Param0, _Param1;
+
+[numthreads(8,8,8)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+	float3 uv = float3(id + 0.5) / _Param0.w;
+	uv += _Param0.xyz;
+	uv = clamp(uv, 0 , 1);
+	_new0[id] = _old0.SampleLevel(sampler_old0, uv, 0);
+	_new1[id] = _old1.SampleLevel(sampler_old1, uv, 0);
+}
+
+[numthreads(8, 8, 8)]
+void Clear(uint3 id : SV_DispatchThreadID)
+{
+	//_new0[id] = 0;
+	//_new1[id] = 0;
+}
+
+StructuredBuffer<float4> posBuffer;
+StructuredBuffer<float4> shBuffer;
+
+
+[numthreads(8, 8, 8)]
+void Fill(uint3 id : SV_DispatchThreadID)
+{
+	float3 spos = (float3(id + 0.5) / _Param0.y - 0.5) * _Param0.z + _Param1.xyz;
+	float3 k[9]; float ws = 0.0000001;
+	for (int j = 0; j < 9; j++)
+	{
+		k[j] = 0;
+	}
+
+	for (int i = 0; i < _Param0.x; i++)
+	{
+		float3 pos = posBuffer[i];
+
+		float dis = distance(pos, spos);
+
+		float weight = 1 / pow(10, dis);
+
+		for (int j = 0; j < 9; j++)
+		{
+			k[j] += shBuffer[i * 9 + j].xyz * weight;
+		}
+		ws += weight;
+	}
+	for (int j = 0; j < 9; j++)
+	{
+		k[j] /= ws;
+	}
+
+	_new0[id] = float4(k[0].xyz, k[1].x);
+	_new1[id] = float4(k[1].yz, k[2].xy);
+	_new2[id] = float4(k[2].z, k[3].xyz);
+	_new3[id] = float4(k[4].xyz, k[5].x);
+	_new4[id] = float4(k[5].yz, k[6].xy);
+	_new5[id] = float4(k[6].z, k[7].xyz);
+	_new6[id] = float4(k[8].xyz, 0);
+}

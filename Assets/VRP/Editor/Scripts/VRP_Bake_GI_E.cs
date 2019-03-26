@@ -64,7 +64,7 @@ namespace vrp
                     go = new GameObject();
                     go.name = "GI Baker";
                     go.AddComponent<VRP_GI_SH>();
-                    go.hideFlags = HideFlags.DontSave;
+                    go.hideFlags = HideFlags.HideInInspector | HideFlags.DontSave;
                 }
                 shg_ = go.GetComponent<VRP_GI_SH>();
                 return shg_;
@@ -77,7 +77,7 @@ namespace vrp
                 return GraphicsSettings.renderPipelineAsset.GetType() == typeof(VRPAsset);
             }
         }
-        public float probe_density = 2;
+        public float probe_density = 1;
         public float keep_percent = 0.1f;
 
         public static readonly VRP_Bake_GI_E instance = new VRP_Bake_GI_E();
@@ -347,12 +347,18 @@ namespace vrp
             bakingMessage = "Don't touch anything during this state.";
             yield return null;
             go.name = "GI SH";
+            go.tag = "GI";
             go.hideFlags = HideFlags.None;
             var scene_sh = go.AddComponent<Scene_SH>();
             var shAsset = SHAsset.CreateInstance<SHAsset>();
             scene_sh.asset = shAsset;
             shAsset.poss = new List<Vector3>();
             shAsset.SHs = new List<SHAsset.SH_Coef>();
+            scene_sh.mat = new Material(Shader.Find("VRP/Test_SH"));
+            scene_sh.show = true;
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            scene_sh.mesh = sphere.GetComponent<MeshFilter>().sharedMesh;
+            GameObject.DestroyImmediate(sphere);
             for (int i = 0; i < sps.Count; i++)
             {
                 if (keep[i])

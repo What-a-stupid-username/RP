@@ -35,7 +35,7 @@ namespace vrp
 
             renderContext.SetupCameraProperties(camera);
 
-            cb.SetRenderTarget(m_renderResources.depth_normal.data);
+            cb.SetRenderTarget(m_renderResources.depth_normal.data, m_renderResources.color.data);
             cb.ClearRenderTarget(true, true, Color.clear);
             renderContext.ExecuteCommandBuffer(cb);
 
@@ -49,21 +49,67 @@ namespace vrp
         public override void Dispose() { }
     }
 
+    class LightRenderer : Renderer
+    {
+        Dictionary<Light, int> m_lights_table;
+
+        public void PrepareShadow(ref ScriptableRenderContext renderContext, List<Light> lights, Camera camera)
+        {
+            //calcu directional light shadow map
+            {
+                List<Light> shadow_directional_lights = new List<Light>();
+
+                foreach (var light in lights)
+                {
+                    if (light.shadows != LightShadows.None && light.type == LightType.Directional)
+                    {
+                        shadow_directional_lights.Add(light);
+                    }
+                }
+                m_renderResources.shadowResources.UpdateDirectionalLights(ref m_lights_table, ref renderContext, shadow_directional_lights, camera, ref m_renderResources.setup_per_camera_properties);
+            }
+
+            //calcu point light shadow map
+            {
+                List<Light> shadow_point_lights = new List<Light>();
+
+                foreach (var light in lights)
+                {
+                    if (light.shadows != LightShadows.None && light.type == LightType.Point)
+                    {
+                        shadow_point_lights.Add(light);
+                    }
+                }
+                m_renderResources.shadowResources.UpdatePointLights(ref m_lights_table, ref renderContext, shadow_point_lights, camera, ref m_renderResources.setup_per_camera_properties);
+            }
+        }
+
+        public void PrepareLightBuffer(List<VisibleLight> lights)
+        {
+            //update light buffer
+            m_renderResources.lightResources.UpdateLightBuffer(ref m_lights_table, lights, ref m_renderResources.setup_per_camera_properties);
+        }
+
+        public LightRenderer()
+        {
+            m_lights_table = new Dictionary<Light, int>();
+        }
+
+        public override void Dispose() { }
+    }
+
+
 
     class CommonRenderer : Renderer
     {
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            //base.Execute(ref renderContext, cullResults, camera);
-
-            PrepareLights(ref renderContext, cullResults.visibleLights, camera);
-
             renderContext.SetupCameraProperties(camera);
 
             CommandBuffer cb = CommandBufferPool.Get("CommonRenderer_setbuffer");
             
             RenderTexture cmrt = m_renderResources.color.data;
-            cb.SetRenderTarget(cmrt, m_renderResources.depth_normal.data);
+            cb.SetRenderTarget(cmrt);
             cb.ClearRenderTarget(false, true, Color.black);
             renderContext.ExecuteCommandBuffer(cb);
 
@@ -82,56 +128,25 @@ namespace vrp
             renderContext.DrawSkybox(camera);
 
             cb.Clear();
-            cb.Blit(cmrt, camera.targetTexture);
             renderContext.ExecuteCommandBuffer(cb);
 
             CommandBufferPool.Release(cb);
         }
-
-
-        protected virtual void PrepareLights(ref ScriptableRenderContext renderContext, List<VisibleLight> lights, Camera camera)
-        {
-            //update light buffer
-            m_renderResources.lightResources.UpdateLightBuffer(lights, ref m_renderResources.setup_per_camera_properties);
-
-            //calcu directional light shadow map
-            {
-                List<Light> shadow_directional_lights = new List<Light>();
-
-                foreach (var light in lights)
-                {
-                    if (light.light.shadows != LightShadows.None && light.lightType == LightType.Directional)
-                    {
-                        shadow_directional_lights.Add(light.light);
-                    }
-                }
-                m_renderResources.shadowResources.UpdateDirectionalLights(ref renderContext, shadow_directional_lights, camera, ref m_renderResources.setup_per_camera_properties);
-            }
-
-            //calcu point light shadow map
-            {
-                List<Light> shadow_point_lights = new List<Light>();
-
-                foreach (var light in lights)
-                {
-                    if (light.light.shadows != LightShadows.None && light.lightType == LightType.Point)
-                    {
-                        shadow_point_lights.Add(light.light);
-                    }
-                }
-                m_renderResources.shadowResources.UpdatePointLights(ref renderContext, shadow_point_lights, camera, ref m_renderResources.setup_per_camera_properties);
-            }
-
-        }
-
         public override void Dispose() {}
     }
 
-    class BakeRenderer : CommonRenderer
+    class BakeRenderer : LightRenderer
     {
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            PrepareLights(ref renderContext, cullResults.visibleLights, camera);
+            List<Light> lights = new List<Light>();
+            foreach (var light in cullResults.visibleLights)
+            {
+                lights.Add(light.light);
+            }
+            PrepareShadow(ref renderContext, lights, camera);
+
+            PrepareLightBuffer(cullResults.visibleLights);
 
             renderContext.SetupCameraProperties(camera);
 
@@ -156,39 +171,15 @@ namespace vrp
 
             CommandBufferPool.Release(cb);
         }
-        protected override void PrepareLights(ref ScriptableRenderContext renderContext, List<VisibleLight> lights, Camera camera)
-        {
-            //update light buffer
-            m_renderResources.lightResources.UpdateLightBuffer(lights, ref m_renderResources.setup_per_camera_properties);
-
-            //calcu directional light shadow map
-            {
-                List<Light> shadow_directional_lights = new List<Light>();
-
-                foreach (var light in lights)
-                {
-                    if (light.light.shadows != LightShadows.None && light.lightType == LightType.Directional)
-                    {
-                        shadow_directional_lights.Add(light.light);
-                    }
-                }
-                m_renderResources.shadowResources.UpdateDirectionalLights(ref renderContext, shadow_directional_lights, camera, ref m_renderResources.setup_per_camera_properties);
-            }
-
-            //calcu point light shadow map
-            {
-                List<Light> shadow_point_lights = new List<Light>();
-
-                foreach (var light in lights)
-                {
-                    if (light.light.shadows != LightShadows.None && light.lightType == LightType.Point)
-                    {
-                        shadow_point_lights.Add(light.light);
-                    }
-                }
-                m_renderResources.shadowResources.UpdatePointLights(ref renderContext, shadow_point_lights, camera, ref m_renderResources.setup_per_camera_properties);
-            }
-        }
     }
 
+    class GIRenderer : Renderer
+    {
+        public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
+        {
+            m_renderResources.giResources.Update(ref renderContext, camera, ref m_renderResources.setup_per_camera_properties);
+        }
+
+        public override void Dispose() { }
+    }
 }

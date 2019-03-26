@@ -24,7 +24,10 @@
 				#pragma vertex vert
 				#pragma fragment frag
 				#pragma target 3.0
+				#pragma multi_compile __ _Enable_B_GI
+
 				#include "PBS.cginc"
+
 
 				struct a2v {
 					float4 vert : POSITION;
@@ -62,6 +65,8 @@
 					IN.z = i.pos.z;
 
 					float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
+
+
 
 					return ComplexPBS(IN, viewDir);
 				}				
