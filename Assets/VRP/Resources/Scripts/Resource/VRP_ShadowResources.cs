@@ -328,6 +328,7 @@ namespace vrp
         public void Dispose()
         {
 #if UNITY_EDITOR
+            Debug.Log("Dispose shadow res");
             UnityEditor.EditorApplication.delayCall += () =>
             {
                 GameObject.DestroyImmediate(helper_);

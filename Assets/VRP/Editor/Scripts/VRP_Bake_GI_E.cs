@@ -103,7 +103,7 @@ namespace vrp
             {
                 RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(256, 256);
                 renderTextureDescriptor.autoGenerateMips = false;
-                renderTextureDescriptor.useMipMap = true;
+                //renderTextureDescriptor.useMipMap = true;
                 renderTextureDescriptor.depthBufferBits = 24;
                 renderTextureDescriptor.dimension = TextureDimension.Cube;
                 renderTextureDescriptor.volumeDepth = 6;

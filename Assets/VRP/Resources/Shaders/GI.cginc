@@ -30,8 +30,8 @@ SamplerState sampler_GIVolume_6;
 
 
 float3 GI_Diffuse(float3 worldPos, float3 normal) {
-	float3 gi_position = worldPos -_WorldSpaceCameraPos;
-	gi_position /= _GI_Volume_Params.x; gi_position += 0.5;
+	float3 gi_position = worldPos - _GI_Volume_Params.xyz;
+	gi_position /= _GI_Volume_Params.w; gi_position += 0.5;
 	gi_position = saturate(gi_position);
 
 	float3 res = 0;

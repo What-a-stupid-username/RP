@@ -13,14 +13,14 @@ public class VRP_GI_SH : MonoBehaviour
         self_camera = GetComponent<Camera>();
         self_camera.enabled = false;
         self_camera.targetTexture = rt_;
-        self_camera.name = "GI Baker";
+        self_camera.name = name;
         self_camera.allowHDR = true;
     }
 
     public void Draw()
     {
         self_camera.RenderToCubemap(rt_);
-        rt_.GenerateMips();
+        //rt_.GenerateMips();
     }
 
 

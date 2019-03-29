@@ -162,7 +162,7 @@ namespace vrp
         public RenderTexture data { get; private set; }
     }
 
-    public class VRenderTextureCube
+    public class VRenderTexture3D
     {
         string m_name;
         RenderTextureFormat m_format;
@@ -172,7 +172,7 @@ namespace vrp
         {
             if (data != null && data.IsCreated())
             {
-                if (data.width != w || data.height != h || data.depth != d)
+                if (data.width != w || data.height != h || data.volumeDepth != d)
                 {
                     data.Release();
                     New(w, h, d);
@@ -203,6 +203,66 @@ namespace vrp
             data.Create();
         }
 
+        public VRenderTexture3D(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false)
+        {
+            m_name = name;
+            m_format = textureFormat;
+            m_liner = liner;
+            m_msaa = msaa ? 8 : 1;
+        }
+
+        public void Dispose()
+        {
+            if (data != null && data.IsCreated())
+            {
+                data.Release();
+            }
+        }
+
+        public RenderTexture data { get; private set; }
+    }
+
+
+    public class VRenderTextureCube
+    {
+        string m_name;
+        RenderTextureFormat m_format;
+        bool m_liner;
+        int m_msaa;
+        public bool TestNeedModify(int w, int h, int d)
+        {
+            if (data != null && data.IsCreated())
+            {
+                if (data.width != w || data.height != h || data.depth != d)
+                {
+                    data.Release();
+                    New(w, h, d);
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                New(w, h, d);
+                return true;
+            }
+        }
+
+        void New(int w, int h, int d)
+        {
+            RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, 0);
+            renderTextureDescriptor.msaaSamples = m_msaa;
+            renderTextureDescriptor.dimension = TextureDimension.Cube;
+            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.depthBufferBits = d;
+            renderTextureDescriptor.enableRandomWrite = false;
+            data = new RenderTexture(renderTextureDescriptor);
+            data.anisoLevel = 2;
+            data.name = m_name;
+
+            data.Create();
+        }
+
         public VRenderTextureCube(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false)
         {
             m_name = name;
@@ -221,6 +281,7 @@ namespace vrp
 
         public RenderTexture data { get; private set; }
     }
+
 
     public class VComputeBuffer
     {

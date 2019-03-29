@@ -68,21 +68,21 @@ void Fill(uint3 id : SV_DispatchThreadID)
 
 	for (int i = 0; i < _Param0.x; i++)
 	{
-		float3 pos = posBuffer[i];
+		float3 pos = posBuffer[i].xyz;
 
 		float dis = distance(pos, spos);
 
 		float weight = 1 / pow(10, dis);
 
-		for (int j = 0; j < 9; j++)
+		for (int m = 0; m < 9; m++)
 		{
-			k[j] += shBuffer[i * 9 + j].xyz * weight;
+			k[m] += shBuffer[i * 9 + m].xyz * weight;
 		}
 		ws += weight;
 	}
-	for (int j = 0; j < 9; j++)
+	for (int m = 0; m < 9; m++)
 	{
-		k[j] /= ws;
+		k[m] /= ws;
 	}
 
 	_new0[id] = float4(k[0].xyz, k[1].x);

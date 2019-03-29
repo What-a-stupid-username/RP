@@ -159,11 +159,13 @@ namespace vrp
             filterSetting.renderQueueRange = RenderQueueRange.opaque;
             filterSetting.layerMask = camera.cullingMask;
 
+            var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_BAKE"));
+            renderSetting.sorting.flags = SortFlags.None;
+
             {
                 renderContext.ExecuteCommandBuffer(m_renderResources.setup_per_camera_properties);
                 m_renderResources.setup_per_camera_properties.Clear();
-                var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_BAKE"));
-                renderSetting.sorting.flags = SortFlags.None;
+ 
                 renderContext.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
 
@@ -177,7 +179,7 @@ namespace vrp
     {
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            m_renderResources.giResources.Update(ref renderContext, camera, ref m_renderResources.setup_per_camera_properties);
+            m_renderResources.giResources.Update(ref renderContext, ref cullResults, camera, ref m_renderResources.setup_per_camera_properties);
         }
 
         public override void Dispose() { }
