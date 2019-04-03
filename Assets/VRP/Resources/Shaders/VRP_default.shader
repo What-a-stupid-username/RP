@@ -281,6 +281,7 @@
 
 			ZTest on
 			ZWrite on
+			Cull front
 
 			CGPROGRAM
 				#pragma vertex vert

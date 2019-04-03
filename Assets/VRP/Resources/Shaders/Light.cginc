@@ -64,7 +64,7 @@ float3 SampleLight_Dir(int cascade, Light light, float4 pos, float3 n, float3 t)
 
 		float2 noise = Rand(pos.xyz);
 		for (int i = 0; i < SAMPLE_DISK_SIZE; i++) {
-			float2 offset = RandOffset(i, noise) * ati * 0.2;
+			float2 offset = RandOffset(i, noise) * ati * 0.1;
 			float4 shadow_uv = mul(shadow_mat, pos + float4(t * offset.x + biot * offset.y, 0)); shadow_uv /= shadow_uv.w;
 			shadow_uv.y = -shadow_uv.y;
 			float2 uv = shadow_uv.xy / 2 + 0.5;

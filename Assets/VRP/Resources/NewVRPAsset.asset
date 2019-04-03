@@ -25,5 +25,5 @@ MonoBehaviour:
   realtimeGIDensity: 64
   distributionDistanceFromCamera: 50
   updateWholeInFrames: 10
-  enableBakedGI: 1
+  enableBakedGI: 0
   updatGIInRealtime: 0

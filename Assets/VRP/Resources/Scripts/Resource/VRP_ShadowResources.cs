@@ -235,7 +235,7 @@ namespace vrp
         {
             if (helper_ == null) return;
             light_table.Clear();
-            helper.name = camera.name + "_helper";
+            //helper.name = camera.name + "_helper";
             if (dirlights.Count == 0) return;
             Transform helper_trans = helper_.transform;
             Matrix4x4 proj_mat = GL.GetGPUProjectionMatrix(camera.projectionMatrix,false) * camera.worldToCameraMatrix;
@@ -328,7 +328,6 @@ namespace vrp
         public void Dispose()
         {
 #if UNITY_EDITOR
-            Debug.Log("Dispose shadow res");
             UnityEditor.EditorApplication.delayCall += () =>
             {
                 GameObject.DestroyImmediate(helper_);

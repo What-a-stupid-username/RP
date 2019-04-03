@@ -3,6 +3,8 @@
 
 #include "PBS.cginc"
 
+float4x4 _Bake_VP;
+
 struct a2v {
 	float4 vert : POSITION;
 	float3 normal : NORMAL;
@@ -16,7 +18,9 @@ struct v2f {
 
 v2f vert(a2v i) {
 	v2f o;
-	o.pos = UnityObjectToClipPos(i.vert);
+	o.pos = mul(_Bake_VP, mul(unity_ObjectToWorld, i.vert));
+	o.pos.x *= -1;
+	//o.pos = UnityObjectToClipPos(i.vert);
 	o.normal = UnityObjectToWorldNormal(i.normal);
 	o.worldPos = mul(unity_ObjectToWorld, i.vert);
 	return o;

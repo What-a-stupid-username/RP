@@ -95,7 +95,8 @@ namespace vrp
                         var helper = resources.shadowResources.helper;
                         helper.aspect = 1;
                         helper.transform.up = Vector3.up;
-                        helper.transform.position = camera.transform.position;
+                        helper.transform.forward = Vector3.forward;
+                        helper.transform.position = camera.transform.position + Vector3.back * m_asset.distributionDistanceFromCamera / 2;
                         helper.orthographicSize = m_asset.distributionDistanceFromCamera * 2;
                         helper.farClipPlane = m_asset.distributionDistanceFromCamera;
                         CullResults.Cull(helper, renderContext, out giCullResult);

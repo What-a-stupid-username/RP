@@ -70,7 +70,15 @@ namespace vrp
 
         public static void SetTextureToDebuger(RenderTexture texture)
         {
-            GameObject.Find("Debug").GetComponent<VRP_Debug>().rt = texture;
+            try
+            {
+                GameObject.Find("Debug").GetComponent<VRP_Debug>().rt = texture;
+            }
+            catch (System.Exception)
+            {
+                GameObject deb = new GameObject("Debug");
+                deb.AddComponent<VRP_Debug>();
+            }
         }
     }
 #endif

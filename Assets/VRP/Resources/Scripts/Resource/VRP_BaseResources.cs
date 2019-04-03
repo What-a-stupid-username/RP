@@ -162,6 +162,107 @@ namespace vrp
         public RenderTexture data { get; private set; }
     }
 
+    public class VRenderTextureCubeArray
+    {
+        string m_name;
+        RenderTextureFormat m_format;
+        bool m_liner;
+        int m_msaa;
+        bool m_shadowmap;
+        public bool TestNeedModify(int w, int h, int n, bool copy_old_to_new = false/*unfinished*/)
+        {
+            if (copy_old_to_new)
+            {
+                if (data != null && data.IsCreated())
+                {
+                    if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                    {
+                        var old_data = data;
+                        New(w, h, n);
+
+                        //int min_size = n < old_data.volumeDepth ? n : old_data.volumeDepth;
+                        //for (int i = 0; i < n; i++)
+                        //{
+                        //    Graphics.Blit(old_data, data);
+                        //}
+
+                        old_data.Release();
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    New(w, h, n);
+                    return true;
+                }
+            }
+            else
+            {
+                if (data != null && data.IsCreated())
+                {
+                    if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                    {
+                        data.Release();
+                        New(w, h, n);
+                        return true;
+                    }
+                    return false;
+                }
+                else
+                {
+                    New(w, h, n);
+                    return true;
+                }
+            }
+        }
+
+        void New(int w, int h, int n)
+        {
+            if (n == 0)
+            {
+                data = null;
+                return;
+            }
+            RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format);
+            renderTextureDescriptor.msaaSamples = m_msaa;
+            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.dimension = TextureDimension.CubeArray;
+            renderTextureDescriptor.volumeDepth = n;
+            renderTextureDescriptor.depthBufferBits = 24;
+            renderTextureDescriptor.shadowSamplingMode = m_shadowmap ? ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
+            data = new RenderTexture(renderTextureDescriptor);
+            data.anisoLevel = 2;
+            data.name = m_name;
+            data.Create();
+        }
+
+        public VRenderTextureCubeArray(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false, bool shadowmap = false)
+        {
+            m_name = name;
+            m_format = textureFormat;
+            m_liner = liner;
+            m_msaa = msaa ? 4 : 1;
+            m_shadowmap = shadowmap;
+        }
+
+        public bool IsValid()
+        {
+            return data != null && data.IsCreated();
+        }
+
+        public void Dispose()
+        {
+            if (data != null && data.IsCreated())
+            {
+                data.Release();
+            }
+        }
+
+        public RenderTexture data { get; private set; }
+    }
+
+
     public class VRenderTexture3D
     {
         string m_name;
