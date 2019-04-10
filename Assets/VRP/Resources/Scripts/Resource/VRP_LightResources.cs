@@ -109,8 +109,8 @@ namespace vrp
 
         public LightResources()
         {
-            lightBuffer = new VComputeBuffer(64);
-            lightBuffer_GI = new VComputeBuffer(64);
+            lightBuffer = new VComputeBuffer(Marshal.SizeOf(typeof(LightStruct)));
+            lightBuffer_GI = new VComputeBuffer(Marshal.SizeOf(typeof(LightStruct)));
         }
         public void Dispose()
         {

@@ -24,7 +24,8 @@
 				#pragma vertex vert
 				#pragma fragment frag
 				#pragma target 3.0
-				#pragma multi_compile __ _Enable_B_GI
+				#pragma multi_compile __ _Enable_GI
+				#pragma multi_compile __ _GI_Only
 
 				#include "PBS.cginc"
 

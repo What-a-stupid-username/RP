@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -322,8 +323,8 @@ namespace vrp
             m_asset = asset;
             m_DirShadowArray = new VRenderTextureArray("dir_shadow_array", RenderTextureFormat.ARGB64, true, false, true);
             m_PointShadowArray = new VRenderTextureArray("point_shadow_array", RenderTextureFormat.RG32, true, false, true);
-            m_shadowcascade_matrix_vp = new VComputeBuffer(256);
-            m_pointLightMatrix = new VComputeBuffer(256);
+            m_shadowcascade_matrix_vp = new VComputeBuffer(Marshal.SizeOf(typeof(ShadowCascadeMatrix)));
+            m_pointLightMatrix = new VComputeBuffer(Marshal.SizeOf(typeof(ShadowCascadeMatrix)));
         }
         public void Dispose()
         {

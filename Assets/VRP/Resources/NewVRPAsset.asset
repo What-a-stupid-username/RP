@@ -20,10 +20,12 @@ MonoBehaviour:
   directionalShadowResolution: 1024
   pointShadowResolution: 512
   enableTessellation: 1
+  OnlyShowGI: 0
   maxDistanceOfIndirectLight: 10
   enableRealtimeGI: 1
-  realtimeGIDensity: 16
+  realtimeGIDensity: 8
+  frustumImportance: 0.6
   distributionDistanceFromCamera: 50
-  undateNumPerFrame: 20
+  updateNumPerFrame: 20
   enableBakedGI: 0
   updatGIInRealtime: 0

@@ -22,6 +22,8 @@
 
 ## Log
 
+2019.4.10 添加Realtime probe GI
+
 2019.3.26 添加Baked GI
 
 2019.3.17 添加SH

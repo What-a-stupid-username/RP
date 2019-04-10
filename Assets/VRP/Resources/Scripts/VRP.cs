@@ -77,7 +77,6 @@ namespace vrp
 
 
 
-
 #if UNITY_EDITOR
                 if (camera.name == "GI Baker")
                 {
@@ -87,50 +86,69 @@ namespace vrp
                     m_bakeRenderer.AllocateResources(resources);
                     m_bakeRenderer.Execute(ref renderContext, cullResults, camera);
                 }
-                else
+                else if (camera.cameraType == CameraType.Game)
                 {
 #endif
+                    var giCullResult = new CullResults();
+                    var helper = resources.shadowResources.helper;
+                    helper.aspect = 1;
+                    helper.transform.up = Vector3.up;
+                    helper.transform.forward = Vector3.forward;
+                    float distance = m_asset.distributionDistanceFromCamera + m_asset.maxDistanceOfIndirectLight;
+                    helper.transform.position = camera.transform.position + Vector3.back * distance / 2;
+                    helper.orthographicSize = distance * 2;
+                    helper.farClipPlane = distance;
+                    CullResults.Cull(helper, renderContext, out giCullResult);
+
+                    var commonCullResults = new CullResults();
+                    CullResults.Cull(camera, renderContext, out commonCullResults);
+
+                    List<Light> totalight = new List<Light>();
                     {
-                        var giCullResult = new CullResults();
-                        var helper = resources.shadowResources.helper;
-                        helper.aspect = 1;
-                        helper.transform.up = Vector3.up;
-                        helper.transform.forward = Vector3.forward;
-                        helper.transform.position = camera.transform.position + Vector3.back * m_asset.distributionDistanceFromCamera / 2;
-                        helper.orthographicSize = m_asset.distributionDistanceFromCamera * 2;
-                        helper.farClipPlane = m_asset.distributionDistanceFromCamera;
-                        CullResults.Cull(helper, renderContext, out giCullResult);
-                        
-                        var commonCullResults = new CullResults();
-                        CullResults.Cull(camera, renderContext, out commonCullResults);
-
-                        List<Light> totalight = new List<Light>();
-                        {
-                            foreach (var light in commonCullResults.visibleLights)
-                                totalight.Add(light.light);
-                            foreach (var light in giCullResult.visibleLights)
-                                totalight.Add(light.light);
-                            totalight = totalight.Distinct().ToList();
-                        }
-
-                        m_lightRenderer.AllocateResources(resources);
-                        m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
-
-
-                        m_lightRenderer.PrepareLightBuffer(giCullResult.visibleLights, true);
-                        m_giRenderer.AllocateResources(resources);
-                        m_giRenderer.Execute(ref renderContext, giCullResult, camera);
-
-                        m_preZRenderer.AllocateResources(resources);
-                        m_preZRenderer.Execute(ref renderContext, commonCullResults, camera);
-
-                        m_lightRenderer.PrepareLightBuffer(commonCullResults.visibleLights);
-                        m_commonRenderer.AllocateResources(resources);
-                        m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
+                        foreach (var light in commonCullResults.visibleLights)
+                            totalight.Add(light.light);
+                        foreach (var light in giCullResult.visibleLights)
+                            totalight.Add(light.light);
+                        totalight = totalight.Distinct().ToList();
                     }
+
+                    m_lightRenderer.AllocateResources(resources);
+                    m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
+
+
+                    m_lightRenderer.PrepareLightBuffer(giCullResult.visibleLights, true);
+                    m_giRenderer.AllocateResources(resources);
+                    m_giRenderer.Execute(ref renderContext, giCullResult, camera);
+
+                    m_preZRenderer.AllocateResources(resources);
+                    m_preZRenderer.Execute(ref renderContext, commonCullResults, camera);
+
+                    m_lightRenderer.PrepareLightBuffer(commonCullResults.visibleLights);
+                    m_commonRenderer.AllocateResources(resources);
+                    m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
 #if UNITY_EDITOR
                 }
+                else
+                {
+                    var commonCullResults = new CullResults();
+                    CullResults.Cull(camera, renderContext, out commonCullResults);
+
+                    List<Light> totalight = new List<Light>();
+                    foreach (var light in commonCullResults.visibleLights)
+                        totalight.Add(light.light);
+
+                    m_lightRenderer.AllocateResources(resources);
+                    m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
+
+                    m_preZRenderer.AllocateResources(resources);
+                    m_preZRenderer.Execute(ref renderContext, commonCullResults, camera);
+
+                    m_lightRenderer.PrepareLightBuffer(commonCullResults.visibleLights);
+                    m_commonRenderer.AllocateResources(resources);
+                    m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
+                }
 #endif
+
 
 
                 var cb_postprocess = CommandBufferPool.Get("Post");

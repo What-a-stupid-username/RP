@@ -30,19 +30,23 @@ namespace vrp
         
 
         [Header("GI")]
-        [Range(0.1f, 100f)]
+        [Tooltip("This mode Only work with editor.")]
+        public bool OnlyShowGI = false;
         [Tooltip("influnce all types of GI")]
         public float maxDistanceOfIndirectLight = 10;
         [Header("Realtime GI")]
         public bool enableRealtimeGI = true;
         [Tooltip("probs density, suggest to set to 32 on pc")]
-        [Range(16, 128)]
+        [Range(8, 128)]
         public int realtimeGIDensity = 32;
+        [Tooltip("Importance sampling of camera frustum.")]
+        [Range(0f, 1f)]
+        public float frustumImportance = 0.6f;
         [Range(0.1f, 100f)]
         public float distributionDistanceFromCamera = 10;
         [Tooltip("Update GI probe Num in one frame.")]
-        [Range(1, 300)]
-        public int undateNumPerFrame = 20;
+        [Range(4, 300)]
+        public int updateNumPerFrame = 20;
         [Header("Baked GI")]
         public bool enableBakedGI = true;
         [Tooltip("update baked GI")]

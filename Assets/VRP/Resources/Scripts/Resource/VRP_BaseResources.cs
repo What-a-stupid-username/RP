@@ -201,7 +201,7 @@ namespace vrp
             {
                 if (data != null && data.IsCreated())
                 {
-                    if (data.width != w || data.height != h || data.volumeDepth < n || data.volumeDepth >= n * 2)
+                    if (data.width != w || data.height != h || data.volumeDepth < n * 6 || data.volumeDepth >= n * 12)
                     {
                         data.Release();
                         New(w, h, n);
@@ -230,6 +230,8 @@ namespace vrp
             renderTextureDescriptor.dimension = TextureDimension.CubeArray;
             renderTextureDescriptor.volumeDepth = n * 6;
             renderTextureDescriptor.depthBufferBits = 24;
+            renderTextureDescriptor.useMipMap = true;
+            renderTextureDescriptor.autoGenerateMips = false;
             renderTextureDescriptor.shadowSamplingMode = m_shadowmap ? ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
             data = new RenderTexture(renderTextureDescriptor);
             data.anisoLevel = 2;

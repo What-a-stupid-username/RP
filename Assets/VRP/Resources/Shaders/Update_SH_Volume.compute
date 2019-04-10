@@ -1,6 +1,7 @@
 ﻿#pragma kernel Update
 #pragma kernel Clear
 #pragma kernel Fill
+#pragma kernel Denoise
 
 #include "SH.cginc"
 
@@ -48,8 +49,13 @@ void Update(uint3 id : SV_DispatchThreadID)
 [numthreads(8, 8, 8)]
 void Clear(uint3 id : SV_DispatchThreadID)
 {
-	//_new0[id] = 0;
-	//_new1[id] = 0;
+	_new0[id] = 0;
+	_new1[id] = 0;
+	_new2[id] = 0;
+	_new3[id] = 0;
+	_new4[id] = 0;
+	_new5[id] = 0;
+	_new6[id] = 0;
 }
 
 StructuredBuffer<float4> posBuffer;
@@ -93,3 +99,103 @@ void Fill(uint3 id : SV_DispatchThreadID)
 	_new5[id] = float4(k[6].z, k[7].xyz);
 	_new6[id] = float4(k[8].xyz, 0);
 }
+
+#define DenoiseCell(x) _new##x[id] = (_new##x[id] + _new##x[id+uint3(1,0,0)] + _new##x[id+uint3(-1,0,0)] + _new##x[id+uint3(0,1,0)] + _new##x[id+uint3(0,-1,0)] + _new##x[id+uint3(0,0,1)] + _new##x[id+uint3(0,0,-1)]) / 7;
+
+[numthreads(8, 8, 8)]
+void Denoise(uint3 id : SV_DispatchThreadID)
+{
+	DenoiseCell(0);
+	DenoiseCell(1);
+	DenoiseCell(2);
+	DenoiseCell(3);
+	DenoiseCell(4);
+	DenoiseCell(5);
+	DenoiseCell(6);
+}
+
+
+
+#pragma kernel Realtime_Batched_CubeMap2SH
+#pragma kernel Update_Probe_In_Volume
+
+#include "Montcalo_Library.hlsl"
+
+TextureCubeArray<float4> CubeMapArray;
+SamplerState samplerCubeMapArray;
+
+StructuredBuffer<float3> dirs;
+
+RWStructuredBuffer<int3> output;
+
+[numthreads(256, 1, 1)]
+void Realtime_Batched_CubeMap2SH(uint group_id : SV_GroupID, uint id : SV_GroupThreadID)
+{
+	float3 dir = dirs[id];
+
+	uint3 p1 = ReverseBits32(asuint(dir.xy));
+	uint2 p2 = (abs(dir.z) > abs(dir.y)) ? p1.zx : p1.zy;
+	p2 = (p2 << 16) | (p2 >> 16);
+	p2 = ((p2 & 0x33333333) << 2) | ((p2 & 0xcccccccc) >> 2);
+	p2 = ((p2 & 0x0f0f0f0f) << 4) | ((p2 & 0xf0f0f0f0) >> 4);
+	uint2 p = p1.xy + p2;
+
+	float3 radians = 0;
+	float3 tangent = 0;
+	if (abs(dir.y) > 0.7) {
+		tangent = cross(float3(0, 0, 1), dir);
+	}
+	else {
+		tangent = cross(float3(0, 1, 0), dir);
+	}
+	float3 bi = cross(tangent, dir);
+
+	half3x3 TangentToWorld = half3x3(tangent, bi, dir);
+
+	for (int i = 0; i < 128; i++)
+	{
+		float2 random = Hammersley(i, 128, p);
+		float3 v = mul(UniformSampleHemisphere(random).xyz, TangentToWorld);
+		float4 c = CubeMapArray.SampleLevel(samplerCubeMapArray, float4(v, group_id), 0);
+		c += step(c.a, 0) * 0.1; //Todo: should sample skybox
+		radians += c;
+	}
+	radians /= 128;
+	radians *= 10000;
+
+	SH9 sh = SHCosineLobe(dir);
+
+	int offset = group_id * 9;
+	[unroll]
+	for (uint i = 0; i < 9; ++i)
+	{
+		int3 value = (int3)(sh.c[i] * radians);
+		InterlockedAdd(output[offset + i].x, value.x);
+		InterlockedAdd(output[offset + i].y, value.y);
+		InterlockedAdd(output[offset + i].z, value.z);
+	}
+}
+
+StructuredBuffer<int3> sampleInfo;
+
+[numthreads(4, 1, 1)]
+void Update_Probe_In_Volume(uint id : SV_DispatchThreadID)
+{
+	int offset = id * 9;
+
+	int3 index = sampleInfo[id];
+
+	_new0[index] = float4(output[offset].xyz, output[offset + 1].x)* 4.908734375e-6f;
+	_new1[index] = float4(output[offset + 1].yz, output[offset + 2].xy)* 4.908734375e-6f;
+	_new2[index] = float4(output[offset + 2].z, output[offset + 3].xyz)* 4.908734375e-6f;
+	_new3[index] = float4(output[offset + 4].xyz, output[offset + 5].x)* 4.908734375e-6f;
+	_new4[index] = float4(output[offset + 5].yz, output[offset + 6].xy)* 4.908734375e-6f;
+	_new5[index] = float4(output[offset + 6].z, output[offset + 7].xyz)* 4.908734375e-6f;
+	_new6[index] = float4(output[offset + 8].xyz, 0)* 4.908734375e-6f;
+
+	for (int i = 0; i < 9; i++)
+	{
+		output[offset + i] = 0;
+	}
+}
+//4.908734375e-6f

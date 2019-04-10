@@ -1,4 +1,4 @@
-﻿Shader "VRP/Test_SH_Volume"
+﻿Shader "VRP/Test_CubeArray"
 {
 	Properties
 	{

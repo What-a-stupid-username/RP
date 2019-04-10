@@ -52,10 +52,14 @@ float4 ComplexPBS(SurfaceInfo IN, float3 viewDir) {
 	}
 
 	//todo:
-#ifdef _Enable_B_GI
+#ifdef _Enable_GI
 	float3 diffuse_light = GI_Diffuse(worldPos, normal);
 	//return float4(diffuse_light, 1);
+#ifdef _GI_Only
+	color = BRDFGI(baseColor, specColor, oneMinusReflectivity, IN.smoothness, normal, viewDir, diffuse_light, 0.1);
+#else
 	color += BRDFGI(baseColor, specColor, oneMinusReflectivity, IN.smoothness, normal, viewDir, diffuse_light, 0.1);
+#endif
 #endif
 
 	return  float4(color, outputAlpha);

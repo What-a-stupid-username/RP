@@ -1,22 +1,44 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
-public class test : MonoBehaviour
+public class Test : MonoBehaviour
 {
-    public RenderTexture rt;
+    public bool show;
+    //[HideInInspector]
+    public Mesh mesh;
+    //[HideInInspector]
+    public Material mat;
+    [HideInInspector]
+    public CommandBuffer cb;
+    ComputeBuffer argsBuffer;
+    public ComputeBuffer posBuffer;
+    public ComputeBuffer shBuffer;
 
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
-        
+        show = false;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnDestroy()
     {
-        Debug.Log(transform.worldToLocalMatrix);
-        Debug.Log(Matrix4x4.Translate(-transform.position) * Matrix4x4.Rotate(Quaternion.Euler(0, 90, 0)));
-        Debug.Log(GetComponent<Camera>().worldToCameraMatrix);
+        if (argsBuffer != null) argsBuffer.Release();
     }
+
+
+#if UNITY_EDITOR
+    private void OnDrawGizmos()
+    {
+        if (cb == null) cb = new CommandBuffer();
+        if (argsBuffer == null) argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
+        cb.Clear();
+        if (show)
+        {
+            argsBuffer.SetData(new uint[] { mesh.GetIndexCount(0), (uint)20, mesh.GetIndexStart(0), mesh.GetBaseVertex(0), 0 });
+
+            cb.DrawMeshInstancedIndirect(mesh, 0, mat, 0, argsBuffer);
+        }
+    }
+#endif
 }
