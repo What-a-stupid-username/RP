@@ -281,10 +281,25 @@
 
 			ZTest on
 			ZWrite on
-			Cull front
 
 			CGPROGRAM
 				#pragma vertex vert
+				#pragma fragment frag
+				#pragma target 3.0
+				#include "Bake.cginc"				
+			ENDCG
+		}
+		//bake
+		Pass{
+			Name "VRPGI"
+			Tags { "LightMode" = "VRP_GI" }
+
+			ZTest on
+			ZWrite on
+			Cull front
+
+			CGPROGRAM
+				#pragma vertex vert_gi
 				#pragma fragment frag
 				#pragma target 3.0
 				#include "Bake.cginc"				

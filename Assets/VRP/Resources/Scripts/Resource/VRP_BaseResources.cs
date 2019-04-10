@@ -228,7 +228,7 @@ namespace vrp
             renderTextureDescriptor.msaaSamples = m_msaa;
             renderTextureDescriptor.sRGB = m_liner;
             renderTextureDescriptor.dimension = TextureDimension.CubeArray;
-            renderTextureDescriptor.volumeDepth = n;
+            renderTextureDescriptor.volumeDepth = n * 6;
             renderTextureDescriptor.depthBufferBits = 24;
             renderTextureDescriptor.shadowSamplingMode = m_shadowmap ? ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
             data = new RenderTexture(renderTextureDescriptor);

@@ -40,9 +40,9 @@ namespace vrp
         public int realtimeGIDensity = 32;
         [Range(0.1f, 100f)]
         public float distributionDistanceFromCamera = 10;
-        [Tooltip("Update whole GI volume in N frames.")]
-        [Range(1, 600)]
-        public int updateWholeInFrames = 10;
+        [Tooltip("Update GI probe Num in one frame.")]
+        [Range(1, 300)]
+        public int undateNumPerFrame = 20;
         [Header("Baked GI")]
         public bool enableBakedGI = true;
         [Tooltip("update baked GI")]

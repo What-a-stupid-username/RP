@@ -18,6 +18,7 @@ namespace vrp
     public class LightResources
     {
         private VComputeBuffer lightBuffer;
+        private VComputeBuffer lightBuffer_GI;
         private class ShaderPropertyID
         {
             public int lightBuffer;
@@ -30,10 +31,14 @@ namespace vrp
         };
         private static readonly ShaderPropertyID shaderPropertyID = new ShaderPropertyID();
 
-        public void UpdateLightBuffer(ref Dictionary<Light, int> lights_table, List<VisibleLight> lights, ref CommandBuffer setup_properties)
+        public void UpdateLightBuffer(ref Dictionary<Light, int> lights_table, List<VisibleLight> lights, ref CommandBuffer setup_properties, bool isGI)
         {
-            lightBuffer.TestNeedModify(lights.Count);
-            BindProperties(lights.Count, ref setup_properties);
+            if (isGI)
+                lightBuffer_GI.TestNeedModify(lights.Count);
+            else
+                lightBuffer.TestNeedModify(lights.Count);
+
+            BindProperties(lights.Count, ref setup_properties, isGI);
             if (lights.Count == 0) return;
 
             List<LightStruct> lights_ = new List<LightStruct>();
@@ -83,13 +88,20 @@ namespace vrp
                 Debug.Log(lights.Count);
                 Debug.Log(lights_table.Count);
             }
-            lightBuffer.data.SetData(lights_);
+            if (isGI)
+                lightBuffer_GI.data.SetData(lights_);
+            else
+                lightBuffer.data.SetData(lights_);
         }
 
-        public void BindProperties(int lightNum, ref CommandBuffer cb)
+        public void BindProperties(int lightNum, ref CommandBuffer cb, bool isGI)
         {
             cb.SetGlobalInt(shaderPropertyID.lightSum, lightNum);
-            if (lightBuffer.IsValid())
+            if (isGI && lightBuffer_GI.IsValid())
+            {
+                cb.SetGlobalBuffer(shaderPropertyID.lightBuffer, lightBuffer_GI.data);
+            }
+            else if (lightBuffer.IsValid())
             {
                 cb.SetGlobalBuffer(shaderPropertyID.lightBuffer, lightBuffer.data);
             }
@@ -98,11 +110,14 @@ namespace vrp
         public LightResources()
         {
             lightBuffer = new VComputeBuffer(64);
+            lightBuffer_GI = new VComputeBuffer(64);
         }
         public void Dispose()
         {
             if (lightBuffer != null)
                 lightBuffer.Dispose();
+            if (lightBuffer_GI != null)
+                lightBuffer_GI.Dispose();
         }
     }
 }

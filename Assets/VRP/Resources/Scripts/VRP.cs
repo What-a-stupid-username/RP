@@ -117,7 +117,7 @@ namespace vrp
                         m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
 
 
-                        m_lightRenderer.PrepareLightBuffer(giCullResult.visibleLights);
+                        m_lightRenderer.PrepareLightBuffer(giCullResult.visibleLights, true);
                         m_giRenderer.AllocateResources(resources);
                         m_giRenderer.Execute(ref renderContext, giCullResult, camera);
 

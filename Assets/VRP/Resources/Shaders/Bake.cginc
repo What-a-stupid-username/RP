@@ -18,9 +18,16 @@ struct v2f {
 
 v2f vert(a2v i) {
 	v2f o;
+	o.pos = UnityObjectToClipPos(i.vert);
+	o.normal = UnityObjectToWorldNormal(i.normal);
+	o.worldPos = mul(unity_ObjectToWorld, i.vert);
+	return o;
+}
+
+v2f vert_gi(a2v i) {
+	v2f o;
 	o.pos = mul(_Bake_VP, mul(unity_ObjectToWorld, i.vert));
 	o.pos.x *= -1;
-	//o.pos = UnityObjectToClipPos(i.vert);
 	o.normal = UnityObjectToWorldNormal(i.normal);
 	o.worldPos = mul(unity_ObjectToWorld, i.vert);
 	return o;

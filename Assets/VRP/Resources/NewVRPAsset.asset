@@ -22,8 +22,8 @@ MonoBehaviour:
   enableTessellation: 1
   maxDistanceOfIndirectLight: 10
   enableRealtimeGI: 1
-  realtimeGIDensity: 64
+  realtimeGIDensity: 16
   distributionDistanceFromCamera: 50
-  updateWholeInFrames: 10
+  undateNumPerFrame: 20
   enableBakedGI: 0
   updatGIInRealtime: 0

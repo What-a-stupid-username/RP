@@ -84,10 +84,10 @@ namespace vrp
             }
         }
 
-        public void PrepareLightBuffer(List<VisibleLight> lights)
+        public void PrepareLightBuffer(List<VisibleLight> lights, bool isGI = false)
         {
             //update light buffer
-            m_renderResources.lightResources.UpdateLightBuffer(ref m_lights_table, lights, ref m_renderResources.setup_per_camera_properties);
+            m_renderResources.lightResources.UpdateLightBuffer(ref m_lights_table, lights, ref m_renderResources.setup_per_camera_properties, isGI);
         }
 
         public LightRenderer()
@@ -179,6 +179,7 @@ namespace vrp
     {
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
+            renderContext.ExecuteCommandBuffer(m_renderResources.setup_per_camera_properties);
             m_renderResources.giResources.Update(ref renderContext, ref cullResults, camera, ref m_renderResources.setup_per_camera_properties);
         }
 

@@ -31,7 +31,7 @@ namespace vrp
         bool enable_bake_gi;
         bool turn;
 
-        VRenderTextureCube cubeTexArray;
+        VRenderTextureCubeArray cubeTexArray;
 
         private class ShaderPropertyID
         {
@@ -84,6 +84,9 @@ namespace vrp
 
             if (enable_bake_gi) PrepareBakedGI(cb, size_of_volume, length_of_volume, camera_pos);
 
+            renderContext.ExecuteCommandBuffer(cb);
+            cb.Clear();
+
             if (m_asset.enableRealtimeGI) PrepareRealtimeGI(ref renderContext, cb, camera, ref cullResults, size_of_volume, length_of_volume, cam_trans);
             
 
@@ -125,9 +128,8 @@ namespace vrp
 
             setup_properties.SetGlobalVector(shaderPropertyID.GI_Volume_Params, new Vector4((int)camera_pos.x, (int)camera_pos.y, (int)camera_pos.z, length_of_volume));
 
-            Shader.SetGlobalTexture("_CubeArray", cubeTexArray.data);
+            setup_properties.SetGlobalTexture("_CubeArray", cubeTexArray.data);
 
-            renderContext.ExecuteCommandBuffer(cb);
             CommandBufferPool.Release(cb);
             turn = !turn;
             last_position = camera.transform.position;
@@ -181,16 +183,17 @@ namespace vrp
 
         void RenderToCube(ref ScriptableRenderContext context, CommandBuffer cb, Camera camera, ref CullResults cullResults, Vector3 pos, int index)
         {
+            index *= 6;
             var filterSetting = new FilterRenderersSettings(true);
             filterSetting.renderQueueRange = RenderQueueRange.opaque;
 
-            var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_BAKE"));
+            var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_GI"));
             renderSetting.sorting.flags = SortFlags.None;
 
             Matrix4x4 t_mat = Matrix4x4.Translate(-pos);
             {
                 Matrix4x4 view_mat = t_mat;
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.PositiveZ, index);
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index + 4); //-z
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -198,8 +201,8 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
             {
-                Matrix4x4 view_mat = t_mat * proj_mats[1];
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.NegativeZ, index);
+                Matrix4x4 view_mat = proj_mats[1] * t_mat;
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index + 5); //z
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -207,8 +210,8 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
             {
-                Matrix4x4 view_mat = t_mat * proj_mats[2];
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.NegativeX, index);
+                Matrix4x4 view_mat = proj_mats[2] * t_mat;
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index + 1); //x
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -216,8 +219,8 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
             {
-                Matrix4x4 view_mat = t_mat * proj_mats[3]; 
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.PositiveX, index);
+                Matrix4x4 view_mat = proj_mats[3] * t_mat; 
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index); //-x
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -225,8 +228,8 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
             {
-                Matrix4x4 view_mat = t_mat * proj_mats[4];
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.PositiveY, index);
+                Matrix4x4 view_mat = proj_mats[4] * t_mat;
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index + 2); //-y
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -234,8 +237,8 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
             {
-                Matrix4x4 view_mat = t_mat * proj_mats[5];
-                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.NegativeY, index);
+                Matrix4x4 view_mat = proj_mats[5] * t_mat;
+                cb.SetRenderTarget(cubeTexArray.data, 0, CubemapFace.Unknown, index + 3); //y
                 cb.ClearRenderTarget(true, true, Color.black);
                 cb.SetGlobalMatrix(shaderPropertyID.bake_vp, proj_mats[0] * view_mat);
                 context.ExecuteCommandBuffer(cb);
@@ -245,22 +248,20 @@ namespace vrp
         }
         void PrepareRealtimeGI(ref ScriptableRenderContext renderContext, CommandBuffer cb, Camera camera, ref CullResults cullResults, int size_of_volume, float length_of_volume, Transform cam_trans)
         {
-            cubeTexArray.TestNeedModify(256, 256, 1);
-
-            RenderToCube(ref renderContext, cb, camera, ref cullResults, Vector3.zero, 0);
-            VRPDebuger.SetTextureToDebuger(cubeTexArray.data);
-
-
-
-            //int frams_split_num = m_asset.updateWholeInFrames;
-            //int sample_num = size_of_volume * size_of_volume * size_of_volume / frams_split_num;
+            int frams_split_num = m_asset.undateNumPerFrame;
+            int sample_num = m_asset.undateNumPerFrame;
 
             //const int batch_size = 10;
 
-            //int block_num = (sample_num / batch_size) + ((sample_num % batch_size != 0)? 1 : 0); block_num = block_num > 2 ? 2 : block_num;
+            //int block_num = (sample_num / batch_size) + ((sample_num % batch_size != 0) ? 1 : 0); block_num = block_num > 20 ? 20 : block_num;
             //int task_size = sample_num < batch_size ? sample_num : batch_size;
 
-            //cubeTexArray.TestNeedModify(256, 256, sample_num > batch_size ? batch_size : sample_num);
+            //cubeTexArray.TestNeedModify(32, 32, sample_num > batch_size ? batch_size : sample_num);
+            cubeTexArray.TestNeedModify(32, 32, 1);
+            for (int i = 0; i < frams_split_num; i++)
+            {
+                RenderToCube(ref renderContext, cb, camera, ref cullResults, Vector3.zero, 0);
+            }
 
             //for (int block_i = 0; block_i < block_num; block_i++)
             //{
@@ -268,7 +269,6 @@ namespace vrp
             //    {
             //        RenderToCube(ref renderContext, cb, camera, ref cullResults, Vector3.zero, sample_i);
             //    }
-            //    VRPDebuger.SetTextureToDebuger(cubeTexArray.data);
             //}
 
 
@@ -401,7 +401,7 @@ namespace vrp
              GameObject.Destroy(helper_);
 #endif
 
-            cubeTexArray = new VRenderTextureCube("realtime GI cube texture", RenderTextureFormat.ARGBFloat);
+            cubeTexArray = new VRenderTextureCubeArray("realtime GI cube texture", RenderTextureFormat.ARGBFloat);
         }
 
         public void Dispose()
