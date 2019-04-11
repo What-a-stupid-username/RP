@@ -20,7 +20,7 @@
 
 <center><font color=gray>with GI</font></center>
 
-![with-gi](./Pictures/post.PNG)
+![post](./Pictures/Post.PNG)
 
 <center><font color=gray>post process</font></center>
 
