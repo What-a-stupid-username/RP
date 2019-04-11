@@ -438,12 +438,14 @@ namespace vrp
     {
         public Material blitSmall { get; private set; }
         public Material blitArray { get; private set; }
+        public Material velocity { get; private set; }
 
 
         public VMaterials()
         {
             blitSmall = new Material(Shader.Find("Hidden/VRP/BlitSmall"));
             blitArray = new Material(Shader.Find("Hidden/VRP/BlitArray"));
+            velocity = new Material(Shader.Find("Hidden/VRP/Velocity"));
         }
 
 

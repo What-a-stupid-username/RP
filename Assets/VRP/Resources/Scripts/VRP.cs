@@ -18,6 +18,7 @@ namespace vrp
         CommonRenderer m_commonRenderer;
         BakeRenderer m_bakeRenderer;
         GIRenderer m_giRenderer;
+        PostRenderer m_postRenderer;
 
 
         public VRP(VRPAsset asset)
@@ -29,6 +30,7 @@ namespace vrp
             m_commonRenderer = new CommonRenderer();
             m_bakeRenderer = new BakeRenderer();
             m_giRenderer = new GIRenderer();
+            m_postRenderer = new PostRenderer();
         }
 
         public override void Dispose()
@@ -42,6 +44,7 @@ namespace vrp
             m_commonRenderer.Dispose();
             m_bakeRenderer.Dispose();
             m_giRenderer.Dispose();
+            m_postRenderer.Dispose();
         }
 
         public override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
@@ -71,8 +74,7 @@ namespace vrp
 
                 var resources = VRenderResourcesPool.Get(m_asset, camera.GetInstanceID());
 
-                resources.depth_normal.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 0);
-                resources.color.TestNeedModify(camera.pixelWidth, camera.pixelHeight, 24);
+                resources.TestNeedModify(camera.pixelWidth, camera.pixelHeight);
 
 
 
@@ -86,7 +88,7 @@ namespace vrp
                     m_bakeRenderer.AllocateResources(resources);
                     m_bakeRenderer.Execute(ref renderContext, cullResults, camera);
                 }
-                else if (camera.cameraType == CameraType.Game)
+                else
                 {
 #endif
                     var giCullResult = new CullResults();
@@ -128,55 +130,40 @@ namespace vrp
                     m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
 #if UNITY_EDITOR
                 }
-                else
-                {
-                    var commonCullResults = new CullResults();
-                    CullResults.Cull(camera, renderContext, out commonCullResults);
-
-                    List<Light> totalight = new List<Light>();
-                    foreach (var light in commonCullResults.visibleLights)
-                        totalight.Add(light.light);
-
-                    m_lightRenderer.AllocateResources(resources);
-                    m_lightRenderer.PrepareShadow(ref renderContext, totalight, camera);
-
-                    m_preZRenderer.AllocateResources(resources);
-                    m_preZRenderer.Execute(ref renderContext, commonCullResults, camera);
-
-                    m_lightRenderer.PrepareLightBuffer(commonCullResults.visibleLights);
-                    m_commonRenderer.AllocateResources(resources);
-                    m_commonRenderer.Execute(ref renderContext, commonCullResults, camera);
-                }
-#endif
-
-
-
-                var cb_postprocess = CommandBufferPool.Get("Post");
-#if UNITY_EDITOR
+               
                 if (camera.name != "GI Baker")
                 {
-                    VRPDebuger.ShowTexture(ref cb_postprocess, resources.depth_normal.data, resources.color.data, 0);
-                    VRPDebuger.ShowTextureArray(ref cb_postprocess, resources.shadowResources.m_DirShadowArray.data, resources.color.data, 0);
+#endif
+                    var pps = camera.GetComponents<VPostProcess>();
+                    if (pps.Length != 0)
+                    {
+                        m_postRenderer.AllocateResources(resources);
+                        Array.Sort(pps, (c1, c2) => { return c1.priority.CompareTo(c2.priority); });
+                        foreach (var pp in pps)
+                        {
+                            if(pp.enabled)
+                                m_postRenderer.Execute(ref renderContext, pp);
+                        }
+                    }
+#if UNITY_EDITOR
                 }
                 try
                 {
                     renderContext.ExecuteCommandBuffer(GameObject.Find("GI SH").GetComponent<Scene_SH>().cb);
                 }
                 catch (Exception) {}
-#endif
-
-#if UNITY_EDITOR
+                
                 if (camera.name != "GI Baker")
                 {
 #endif
-                    cb_postprocess.Blit(resources.color.data, camera.targetTexture);
+                    CommandBuffer cb = CommandBufferPool.Get("final blit");
+                    cb.Blit(resources.sceneColor.data, camera.targetTexture);
+                    cb.CopyTexture(resources.sceneColor.data, resources.sceneColorPrev.data);
+                    renderContext.ExecuteCommandBuffer(cb);
+                    CommandBufferPool.Release(cb);
 #if UNITY_EDITOR
                 }
 #endif
-
-                renderContext.ExecuteCommandBuffer(cb_postprocess);
-                CommandBufferPool.Release(cb_postprocess);
-
                 renderContext.Submit();
             }
             VRenderResourcesPool.KeepAlive();

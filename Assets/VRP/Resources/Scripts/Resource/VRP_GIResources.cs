@@ -193,7 +193,8 @@ namespace vrp
     {
         VRPAsset m_asset;
 
-        public Vector3 last_position;
+        Vector3 position;
+        Vector3 last_position;
 
         ComputeShader m_cs_UpdateSHVolume;
         int kernel_Update;
@@ -205,16 +206,13 @@ namespace vrp
 
         Matrix4x4[] proj_mats;
 
-        private VRenderTexture3D[] old_volume;
-        private VRenderTexture3D[] new_volume;
-
-        int cached_volume_size;
-        float cached_volume_length;
+        private VRenderTexture3D[] tempVolumes;
+        private VRenderTexture3D[] giVolumes;
 
         Scene_SH cached_scene_sh;
 
         bool enable_bake_gi;
-        bool turn;
+        bool enable_realtime_gi;
 
         VRenderTextureCubeArray cubeTexArray;
 
@@ -230,8 +228,8 @@ namespace vrp
 
             public int GI_Volume_Params;
             public int param0, param1;
-            public int[] old_volume;
-            public int[] new_volume;
+            public int[] r_volumes;
+            public int[] w_volumes;
 
             public int cubeMapArray;
             public int dirs;
@@ -245,12 +243,12 @@ namespace vrp
 
                 param0 = Shader.PropertyToID("_Param0");//xyz:(moved_distance/volume_length)   w:texture size
                 param1 = Shader.PropertyToID("_Param1");//---
-                old_volume = new int[7]; new_volume = new int[7]; giVolume = new int[7];
+                r_volumes = new int[7]; w_volumes = new int[7]; giVolume = new int[7];
                 for (int i = 0; i < 7; i++)
                 {
                     GI_Volume_Params = Shader.PropertyToID("_GI_Volume_Params");
-                    old_volume[i] = Shader.PropertyToID("_old" + i.ToString());
-                    new_volume[i] = Shader.PropertyToID("_new" + i.ToString());
+                    r_volumes[i] = Shader.PropertyToID("_old" + i.ToString());
+                    w_volumes[i] = Shader.PropertyToID("_new" + i.ToString());
                     giVolume[i] = Shader.PropertyToID("_GIVolume_" + i.ToString());
                 }
 
@@ -265,85 +263,92 @@ namespace vrp
 
         public void Update(ref ScriptableRenderContext renderContext, ref CullResults cullResults, Camera camera, ref CommandBuffer setup_properties)
         {
-            if (camera.cameraType != CameraType.Game) return;
+//#if UNITY_EDITOR
+//            if (camera.cameraType != CameraType.Game)
+//            {
+//                setup_properties.DisableShaderKeyword("_Enable_GI");
+//                return;
+//            }
+//#endif
 
             TestEnable(setup_properties);
 
+            if ((!enable_bake_gi) && (!enable_realtime_gi)) return;
+
             int size_of_volume = m_asset.realtimeGIDensity;
             float length_of_volume = m_asset.distributionDistanceFromCamera;
+            float deltaDistance = length_of_volume / size_of_volume;
             Transform cam_trans = camera.transform;
-            Vector3 camera_pos = cam_trans.position;
+            position = cam_trans.position;
+            position = new Vector3(Mathf.Round(position.x / deltaDistance) * deltaDistance, Mathf.Round(position.y / deltaDistance) * deltaDistance, Mathf.Round(position.z / deltaDistance) * deltaDistance);
 
             var cb = CommandBufferPool.Get("GI Volume update");
 
-            for (int i = 0; i < 7; i++)
-            {
-                old_volume[i].TestNeedModify(size_of_volume, size_of_volume, size_of_volume);
-                new_volume[i].TestNeedModify(size_of_volume, size_of_volume, size_of_volume);
+            for (int i = 0; i < 7; i++) {
+                tempVolumes[i].TestNeedModify(size_of_volume, size_of_volume, size_of_volume);
+                giVolumes[i].TestNeedModify(size_of_volume, size_of_volume, size_of_volume);
             }
 
-            if (enable_bake_gi) PrepareBakedGI(cb, size_of_volume, length_of_volume, camera_pos);
-
-            renderContext.ExecuteCommandBuffer(cb);
+            OffsetVolume(cb, size_of_volume, (position - last_position) / deltaDistance);
+            renderContext.ExecuteCommandBufferAsync(cb, ComputeQueueType.Default);
             cb.Clear();
 
-            if (m_asset.enableRealtimeGI) PrepareRealtimeGI(ref renderContext, cb, camera, ref cullResults, size_of_volume, length_of_volume, cam_trans);
-            //RenderToCube(ref renderContext, cb, camera, ref cullResults, ori + deltaDistance * (Vector3)probe, index++);
+            if (enable_bake_gi) {
+                PrepareBakedGI(cb, size_of_volume, length_of_volume, position);
+                renderContext.ExecuteCommandBuffer(cb);
+                cb.Clear();
+            }
+
+            if (enable_realtime_gi)
+                PrepareRealtimeGI(ref renderContext, cb, camera, ref cullResults, size_of_volume, length_of_volume, cam_trans.forward);
+
+            //Denoise(cb, size_of_volume);
+            //renderContext.ExecuteCommandBuffer(cb);
+            //cb.Clear();
 
             for (int i = 0; i < 7; i++)
-                setup_properties.SetGlobalTexture(shaderPropertyID.giVolume[i], /*turn ?*/ new_volume[i].data /*: old_volume0.data*/);
+                setup_properties.SetGlobalTexture(shaderPropertyID.giVolume[i], giVolumes[i].data);
 
-            setup_properties.SetGlobalVector(shaderPropertyID.GI_Volume_Params, new Vector4((int)camera_pos.x, (int)camera_pos.y, (int)camera_pos.z, length_of_volume));
+            setup_properties.SetGlobalVector(shaderPropertyID.GI_Volume_Params, new Vector4(position.x, position.y, position.z, length_of_volume));
 
             CommandBufferPool.Release(cb);
-            turn = !turn;
-            last_position = camera.transform.position;
+
+            last_position = position;
         }
 
-        void ClearVolume(CommandBuffer cb, bool turn, int size)
+        void ClearVolume(CommandBuffer cb, int size)
         {
-            if (turn)
-            {
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Clear, shaderPropertyID.new_volume[i], new_volume[i].data);
+            for (int i = 0; i < 7; i++)
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Clear, shaderPropertyID.w_volumes[i], giVolumes[i].data);
 
-                cb.DispatchCompute(m_cs_UpdateSHVolume, 0, size / 8, size / 8, size / 8);
-            }
-            else
-            {
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Clear, shaderPropertyID.new_volume[i], old_volume[i].data);
-
-                cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Clear, size / 8, size / 8, size / 8);
-            }
+            cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Clear, size / 8, size / 8, size / 8);
         }
 
-        void OffsetVolume(CommandBuffer cb, bool turn, int size, Vector4 parm0)
+        void OffsetVolume(CommandBuffer cb, int size, Vector3 offset)
         {
-            if (turn)
-            {
-                cb.SetComputeVectorParam(m_cs_UpdateSHVolume, shaderPropertyID.param0, parm0);
+            cb.SetComputeVectorParam(m_cs_UpdateSHVolume, shaderPropertyID.param0, offset);
 
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.old_volume[i], old_volume[i].data);
+            for (int i = 0; i < 7; i++)
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.r_volumes[i], giVolumes[i].data);
 
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.new_volume[i], new_volume[i].data);
+            for (int i = 0; i < 7; i++)
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.w_volumes[i], tempVolumes[i].data);
 
-                cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Update, size / 8, size / 8, size / 8);
-            }
-            else
-            {
-                cb.SetComputeVectorParam(m_cs_UpdateSHVolume, shaderPropertyID.param0, parm0);
+            cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Update, size / 8, size / 8, size / 8);
 
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.old_volume[i], new_volume[i].data);
+            for (int i = 0; i < 7; i++)
+                cb.CopyTexture(tempVolumes[i].data, giVolumes[i].data);
+        }
 
-                for (int i = 0; i < 7; i++)
-                    cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update, shaderPropertyID.new_volume[i], old_volume[i].data);
+        void Denoise(CommandBuffer cb, int size)
+        {
+            for (int i = 0; i < 7; i++)
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Denoise, shaderPropertyID.r_volumes[i], tempVolumes[i].data);
 
-                cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Update, size / 8, size / 8, size / 8);
-            }
+            for (int i = 0; i < 7; i++)
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Denoise, shaderPropertyID.w_volumes[i], giVolumes[i].data);
+
+            cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Denoise, size / 8, size / 8, size / 8);
         }
 
         void RenderToCube(ref ScriptableRenderContext context, CommandBuffer cb, Camera camera, ref CullResults cullResults, Vector3 pos, int index)
@@ -411,16 +416,15 @@ namespace vrp
                 context.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
             }
         }
-        void PrepareRealtimeGI(ref ScriptableRenderContext renderContext, CommandBuffer cb, Camera camera, ref CullResults cullResults, int size_of_volume, float length_of_volume, Transform cam_trans)
+        void PrepareRealtimeGI(ref ScriptableRenderContext renderContext, CommandBuffer cb, Camera camera, ref CullResults cullResults, int size_of_volume, float length_of_volume, Vector3 forward)
         { 
             int sampleNum = m_asset.updateNumPerFrame;
-            if (sampleNum % 4 != 0)
-            {
+            if (sampleNum % 4 != 0) {
                 sampleNum = (sampleNum / 4 + 1) * 4;
                 m_asset.updateNumPerFrame = sampleNum;
             }
-            int volumeSize = m_asset.realtimeGIDensity;
-            float deltaDistance = m_asset.distributionDistanceFromCamera / volumeSize;
+            int volumeSize = size_of_volume;
+            float deltaDistance = length_of_volume / volumeSize;
             int half_volumeSize = volumeSize / 2;
 
             volumeProbeSampler.frustum_importance = m_asset.frustumImportance;
@@ -432,10 +436,10 @@ namespace vrp
             sh_buffer.TestNeedModify(sampleNum * 9);
 
             //resample
-            volumeProbeSampler.Sample(cam_trans.forward);
+            volumeProbeSampler.Sample(forward);
 
             int index = 0;
-            Vector3 ori = cam_trans.position - Vector3.one * deltaDistance * (half_volumeSize - 0.5f);
+            Vector3 ori = position - Vector3.one * deltaDistance * (half_volumeSize - 0.5f);
             SampleInfo[] sampleInfos_ = new SampleInfo[sampleNum];
             foreach (var probe in volumeProbeSampler.samples)
             {
@@ -453,18 +457,18 @@ namespace vrp
             cb.SetComputeBufferParam(m_cs_UpdateSHVolume, kernel_Update_Probe_In_Volume, shaderPropertyID.sampleInfo, sampleInfos_buffer.data);
 
             for (int i = 0; i < 7; i++)
-                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update_Probe_In_Volume, shaderPropertyID.new_volume[i], new_volume[i].data);
+                cb.SetComputeTextureParam(m_cs_UpdateSHVolume, kernel_Update_Probe_In_Volume, shaderPropertyID.w_volumes[i], giVolumes[i].data);
             
             cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Update_Probe_In_Volume, sampleNum / 4, 1, 1);
 
-            renderContext.ExecuteCommandBufferAsync(cb, ComputeQueueType.Background);
+            renderContext.ExecuteCommandBufferAsync(cb, ComputeQueueType.Default);
             cb.Clear();
         }
 
         void PrepareBakedGI(CommandBuffer cb, int size_of_volume, float length_of_volume, Vector3 camera_pos)
         {
             for (int i = 0; i < 7; i++)
-                m_cs_UpdateSHVolume.SetTexture(kernel_Fill, shaderPropertyID.new_volume[i], new_volume[i].data);
+                m_cs_UpdateSHVolume.SetTexture(kernel_Fill, shaderPropertyID.w_volumes[i], giVolumes[i].data);
 
             cb.SetComputeBufferParam(m_cs_UpdateSHVolume, kernel_Fill, "posBuffer", cached_scene_sh.posBuffer);
             cb.SetComputeBufferParam(m_cs_UpdateSHVolume, kernel_Fill, "shBuffer", cached_scene_sh.shBuffer);
@@ -499,17 +503,18 @@ namespace vrp
                 }
             }
 
-            bool enable_gi_of_shader = m_asset.enableBakedGI | m_asset.enableRealtimeGI;
+            enable_realtime_gi = m_asset.enableRealtimeGI;
+            bool enable_gi_of_shader = enable_bake_gi | enable_realtime_gi;
             if (enable_gi_of_shader)
             {
-                Shader.EnableKeyword("_Enable_GI");
+                setup_properties.EnableShaderKeyword("_Enable_GI");
 #if UNITY_EDITOR
-                if (m_asset.OnlyShowGI) Shader.EnableKeyword("_GI_Only");
-                else Shader.DisableKeyword("_GI_Only");
+                if (m_asset.OnlyShowGI) setup_properties.EnableShaderKeyword("_GI_Only");
+                else setup_properties.DisableShaderKeyword("_GI_Only");
 #endif
             }
             else
-                Shader.DisableKeyword("_Enable_GI");
+                setup_properties.DisableShaderKeyword("_Enable_GI");
 
         }
 
@@ -528,19 +533,13 @@ namespace vrp
             kernel_Realtime_Batched_CubeMap2SH = m_cs_UpdateSHVolume.FindKernel("Realtime_Batched_CubeMap2SH");
             kernel_Update_Probe_In_Volume = m_cs_UpdateSHVolume.FindKernel("Update_Probe_In_Volume");
 
-            old_volume = new VRenderTexture3D[7];
-            new_volume = new VRenderTexture3D[7];
+            tempVolumes = new VRenderTexture3D[7];
+            giVolumes = new VRenderTexture3D[7];
             for (int i = 0; i < 7; i++)
             {
-                old_volume[i] = new VRenderTexture3D("old_gi_volume_" + i.ToString(), RenderTextureFormat.ARGBFloat);
-                new_volume[i] = new VRenderTexture3D("new_gi_volume_" + i.ToString(), RenderTextureFormat.ARGBFloat);
-                new_volume[i].TestNeedModify(16, 16, 16);
+                tempVolumes[i] = new VRenderTexture3D("old_gi_volume_" + i.ToString(), RenderTextureFormat.ARGBFloat);
+                giVolumes[i] = new VRenderTexture3D("new_gi_volume_" + i.ToString(), RenderTextureFormat.ARGBFloat);
             }
-
-            cached_volume_size = -1;
-            cached_volume_length = -1;
-
-            turn = true;
 
             GameObject helper_;
             Camera helper;
@@ -582,13 +581,17 @@ namespace vrp
             volumeProbeSampler = new VolumeProbeSampler();
         }
 
-        public void Dispose()
+        public void Dispose() 
         {
             for (int i = 0; i < 7; i++)
             {
-                old_volume[i].Dispose();
-                new_volume[i].Dispose();
+                tempVolumes[i].Dispose();
+                giVolumes[i].Dispose();
             }
+            cubeTexArray.Dispose();
+            pre_random_dirs_buffer.Dispose();
+            sampleInfos_buffer.Dispose();
+            sh_buffer.Dispose();
         }
         
         public static Vector3[] pre_random_dirs = {

@@ -53,7 +53,13 @@
 				float _Metallic;
 				float _Glossiness;
 
-				float4 frag(v2f i) : SV_TARGET {
+				struct Result {
+					float4 sceneColor: SV_TARGET0;
+					float4 baseColor_Metallic: SV_TARGET1;
+					float4 normal_Roughness: SV_TARGET2;
+				};
+
+				Result frag(v2f i) {
 
 					SurfaceInfo IN;
 					IN.baseColor = _Color;
@@ -67,9 +73,15 @@
 
 					float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 
+					Result res;
+					res.sceneColor = ComplexPBS(IN, viewDir);
 
+					res.baseColor_Metallic.rgb = _Color;
+					res.baseColor_Metallic.a = _Metallic;
+					res.normal_Roughness.rgb = (IN.normal + 1) / 2;
+					res.normal_Roughness.a = PerceptualRoughnessToRoughness(SmoothnessToPerceptualRoughness(_Glossiness));
 
-					return ComplexPBS(IN, viewDir);
+					return res;
 				}				
 			ENDCG
 		}
@@ -91,32 +103,32 @@
 			#pragma fragment frag
 			#pragma target 3.0
 			#include "UnityCG.cginc"
-			#include "./Light.cginc"
+			#include "Light.cginc"
 
 			struct a2v {
 				float4 vert : POSITION;
-				float3 normal : NORMAL;
 			};
 
 			struct v2f {
 				float4 pos : SV_POSITION;
-				float3 normal : NORMAL;
 			};
 
 			v2f vert(a2v i) {
 				v2f o;
 				o.pos = UnityObjectToClipPos(i.vert);
-				o.normal = UnityObjectToWorldNormal(i.normal);
 				return o;
 			}
 
 			float4 frag(v2f i) : SV_TARGET {
 				float4 color = 0;
-				float3 normal = normalize(i.normal);
-				color.x = (normal.x + 1) / 2;
-				color.y = (normal.y + 1) / 2;
-				color.z = (normal.z + 1) / 2;
-				color.w = i.pos.z;
+
+				//x   -  depth
+				color.r = i.pos.z;
+				//yzw -  velocity
+
+				//  yzw=0 is used to point out that this object is stable(no need to calculate move speed).
+				//  if you want to extend this buffer to movable objects, put move speed in yzw, they will 
+				//  be filled with final velocity in camera space automatically.
 
 				return color;
 			}

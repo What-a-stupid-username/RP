@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -22,10 +21,12 @@ namespace vrp
 
     class PreZRenderer : Renderer
     {
+        int _Last_VP = Shader.PropertyToID("_Last_VP");
+        int _VP = Shader.PropertyToID("_VP");
 
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
         {
-            //base.Execute(ref renderContext, cullResults, camera);
+            Matrix4x4 vp = GL.GetGPUProjectionMatrix(camera.projectionMatrix,false) * camera.worldToCameraMatrix;
             
             CommandBuffer cb = CommandBufferPool.Get("PreZRenderer");
 
@@ -35,15 +36,23 @@ namespace vrp
 
             renderContext.SetupCameraProperties(camera);
 
-            cb.SetRenderTarget(m_renderResources.depth_normal.data, m_renderResources.color.data);
+            cb.SetRenderTarget(m_renderResources.depth_Velocity.data, m_renderResources.depth.data);
             cb.ClearRenderTarget(true, true, Color.clear);
             renderContext.ExecuteCommandBuffer(cb);
 
             var renderSetting = new DrawRendererSettings(camera, new ShaderPassName("VRP_PREZ"));
             renderSetting.sorting.flags = SortFlags.None;
             renderContext.DrawRenderers(cullResults.visibleRenderers, ref renderSetting, filterSetting);
+            cb.Clear();
+
+            cb.SetGlobalMatrix(_Last_VP, m_renderResources.lastVP);
+            cb.SetGlobalMatrix(_VP, vp.inverse);
+            cb.Blit(m_renderResources.depth_Velocity.data, m_renderResources.sceneColor.data, m_renderResources.materials.velocity, 0);
+            cb.Blit(m_renderResources.sceneColor.data, m_renderResources.depth_Velocity.data);
+            renderContext.ExecuteCommandBuffer(cb);
 
             CommandBufferPool.Release(cb);
+            m_renderResources.lastVP = vp;
         }
 
         public override void Dispose() { }
@@ -52,6 +61,8 @@ namespace vrp
     class LightRenderer : Renderer
     {
         Dictionary<Light, int> m_lights_table;
+
+        public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera) { throw new NotImplementedException(); }
 
         public void PrepareShadow(ref ScriptableRenderContext renderContext, List<Light> lights, Camera camera)
         {
@@ -98,8 +109,6 @@ namespace vrp
         public override void Dispose() { }
     }
 
-
-
     class CommonRenderer : Renderer
     {
         public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera)
@@ -108,9 +117,9 @@ namespace vrp
 
             CommandBuffer cb = CommandBufferPool.Get("CommonRenderer_setbuffer");
             
-            RenderTexture cmrt = m_renderResources.color.data;
-            cb.SetRenderTarget(cmrt);
-            cb.ClearRenderTarget(false, true, Color.black);
+            RenderTargetIdentifier[] mrt = new RenderTargetIdentifier[] { m_renderResources.sceneColor.data, m_renderResources.baseColor_Metallic.data, m_renderResources.normal_Roughness.data };
+            cb.SetRenderTarget(mrt, m_renderResources.depth.data);
+            cb.ClearRenderTarget(false, true, Color.clear);
             renderContext.ExecuteCommandBuffer(cb);
 
             var filterSetting = new FilterRenderersSettings(true);
@@ -152,7 +161,7 @@ namespace vrp
 
             CommandBuffer cb = CommandBufferPool.Get("CommonRenderer_setbuffer");
             
-            cb.ClearRenderTarget(true, true, Color.black);
+            cb.ClearRenderTarget(true, true, Color.clear);
             renderContext.ExecuteCommandBuffer(cb);
 
             var filterSetting = new FilterRenderersSettings(true);
@@ -183,6 +192,32 @@ namespace vrp
             m_renderResources.giResources.Update(ref renderContext, ref cullResults, camera, ref m_renderResources.setup_per_camera_properties);
         }
 
+        public override void Dispose() { }
+    }
+
+    class PostRenderer : Renderer
+    {
+        void SetupIdentifier(VPostProcess post)
+        {
+            post.Init();
+            if (m_renderResources.modified == true || post.textureIdentifiers.init == false)
+            {
+                post.textureIdentifiers.init = true;
+                post.textureIdentifiers.sceneColor = m_renderResources.sceneColor.data;
+                post.textureIdentifiers.sceneColorPrev = m_renderResources.sceneColorPrev.data;
+                post.textureIdentifiers.normal_Roughness = m_renderResources.normal_Roughness.data;
+                post.textureIdentifiers.depth_Velocity = m_renderResources.depth_Velocity.data;
+                post.textureIdentifiers.baseColor_Metallic = m_renderResources.baseColor_Metallic.data;
+                post.ReuildCommandBuffer();
+            }
+        }
+
+        public void Execute(ref ScriptableRenderContext renderContext, VPostProcess post)
+        {
+            SetupIdentifier(post);
+            renderContext.ExecuteCommandBuffer(post.cb);
+        }
+        public override void Execute(ref ScriptableRenderContext renderContext, CullResults cullResults, Camera camera) { throw new NotImplementedException(); }
         public override void Dispose() { }
     }
 }

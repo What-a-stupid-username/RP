@@ -9,7 +9,7 @@ namespace vrp
     public class VRPAsset : RenderPipelineAsset
     {
         public VRPResources resources;
-        public bool MASS = true;
+        public bool MSAA = true;
 
         [Header("Shadow")]
         [Min(20)]
@@ -36,7 +36,7 @@ namespace vrp
         public float maxDistanceOfIndirectLight = 10;
         [Header("Realtime GI")]
         public bool enableRealtimeGI = true;
-        [Tooltip("probs density, suggest to set to 32 on pc")]
+        [Tooltip("probs density(resolution of gi volume)")]
         [Range(8, 128)]
         public int realtimeGIDensity = 32;
         [Tooltip("Importance sampling of camera frustum.")]

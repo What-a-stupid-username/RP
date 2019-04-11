@@ -10,8 +10,13 @@ namespace vrp
         public int id { get; private set; }
         public VRPResources m_VRPResources;
 
-        public VRenderTexture2D color;
-        public VRenderTexture2D depth_normal;
+        public bool modified = false;
+        public VRenderTexture2D depth_Velocity;
+        public VRenderTexture2D sceneColor;
+        public VRenderTexture2D sceneColorPrev;
+        public VRenderTexture2D depth;
+        public VRenderTexture2D baseColor_Metallic;
+        public VRenderTexture2D normal_Roughness;
 
 
         public LightResources lightResources;
@@ -22,6 +27,8 @@ namespace vrp
         public CommandBuffer setup_per_camera_properties;
 
         public VMaterials materials;
+
+        public Matrix4x4 lastVP;
 
         public VRenderResources(VRPAsset asset, int id= 0)
         {
@@ -37,8 +44,12 @@ namespace vrp
             }
             if (m_VRPResources == null) Debug.LogError("Can't find VRP resources!");
 
-            color = new VRenderTexture2D(id+"_color", RenderTextureFormat.ARGB32, true, asset.MASS);
-            depth_normal = new VRenderTexture2D(id+"_depth_normal", RenderTextureFormat.ARGB64, true, asset.MASS);
+            depth_Velocity = new VRenderTexture2D(id + "_velocity", RenderTextureFormat.ARGBFloat, true, asset.MSAA);
+            sceneColor = new VRenderTexture2D(id + "_sceneColor", RenderTextureFormat.ARGBFloat, true, asset.MSAA);
+            sceneColorPrev = new VRenderTexture2D(id + "_sceneColor", RenderTextureFormat.ARGBFloat, true);
+            depth = new VRenderTexture2D(id + "_depth", RenderTextureFormat.Depth, true, asset.MSAA);
+            baseColor_Metallic = new VRenderTexture2D(id + "_baseColor_Metallic", RenderTextureFormat.ARGB32, true, asset.MSAA);
+            normal_Roughness = new VRenderTexture2D(id + "_normal_Roughness", RenderTextureFormat.ARGBHalf, true, asset.MSAA);
 
             lightResources = new LightResources();
             shadowResources = new ShadowResources(asset);
@@ -49,10 +60,26 @@ namespace vrp
             setup_per_camera_properties = CommandBufferPool.Get(id+"_setproperties_beforeOpaque");
         }
 
+        public bool TestNeedModify(int width, int height)
+        {
+            modified = false;
+            modified |= depth_Velocity.TestNeedModify(width, height, 0);
+            modified |= sceneColor.TestNeedModify(width, height, 0);
+            modified |= sceneColorPrev.TestNeedModify(width, height, 0);
+            modified |= depth.TestNeedModify(width, height, 24);
+            modified |= baseColor_Metallic.TestNeedModify(width, height, 0);
+            modified |= normal_Roughness.TestNeedModify(width, height, 0);
+            return modified;
+        }
+
         public void Dispose()
         {
-            color.Dispose();
-            depth_normal.Dispose();
+            depth_Velocity.Dispose();
+            sceneColor.Dispose();
+            sceneColorPrev.Dispose();
+            depth.Dispose();
+            baseColor_Metallic.Dispose();
+            normal_Roughness.Dispose();
 
             lightResources.Dispose();
             shadowResources.Dispose();

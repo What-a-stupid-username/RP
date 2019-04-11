@@ -53,12 +53,12 @@ namespace vrp
             Debug.DrawLine(d, a, color, time);
         }
 
-        public static void ShowTexture(ref CommandBuffer cb, Texture texture, RenderTargetIdentifier target, int pos = 0)
+        public static void ShowTexture(CommandBuffer cb, RenderTargetIdentifier texture, RenderTargetIdentifier target, int pos = 0)
         {
             var blitSmall = new Material(Shader.Find("Hidden/VRP/BlitSmall"));
             cb.Blit(texture, target, blitSmall, pos > 4 ? 4 : pos);
         }
-        public static void ShowTextureArray(ref CommandBuffer cb, Texture texture, RenderTargetIdentifier target, int index = 0)
+        public static void ShowTextureArray(CommandBuffer cb, RenderTargetIdentifier texture, RenderTargetIdentifier target, int index = 0)
         {
             var blitSmall = new Material(Shader.Find("Hidden/VRP/BlitArray"));
             cb.SetGlobalInt("_ArrayIndex", index);

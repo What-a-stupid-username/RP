@@ -6,25 +6,12 @@
 #include "SH.cginc"
 
 Texture3D<float4> _old0;
-SamplerState sampler_old0;
-
 Texture3D<float4> _old1;
-SamplerState sampler_old1;
-
 Texture3D<float4> _old2;
-SamplerState sampler_old2;
-
 Texture3D<float4> _old3;
-SamplerState sampler_old3;
-
 Texture3D<float4> _old4;
-SamplerState sampler_old4;
-
 Texture3D<float4> _old5;
-SamplerState sampler_old5;
-
 Texture3D<float4> _old6;
-SamplerState sampler_old6;
 
 RWTexture3D<float4> _new0;
 RWTexture3D<float4> _new1;
@@ -39,23 +26,28 @@ float4 _Param0, _Param1;
 [numthreads(8,8,8)]
 void Update(uint3 id : SV_DispatchThreadID)
 {
-	float3 uv = float3(id + 0.5) / _Param0.w;
-	uv += _Param0.xyz;
-	uv = clamp(uv, 0 , 1);
-	_new0[id] = _old0.SampleLevel(sampler_old0, uv, 0);
-	_new1[id] = _old1.SampleLevel(sampler_old1, uv, 0);
+#define OffsetVolume(x) _new##x[id] = _old##x[id + _Param0.xyz]
+
+	OffsetVolume(0);
+	OffsetVolume(1);
+	OffsetVolume(2);
+	OffsetVolume(3);
+	OffsetVolume(4);
+	OffsetVolume(5);
+	OffsetVolume(6);
 }
 
 [numthreads(8, 8, 8)]
 void Clear(uint3 id : SV_DispatchThreadID)
 {
-	_new0[id] = 0;
-	_new1[id] = 0;
-	_new2[id] = 0;
-	_new3[id] = 0;
-	_new4[id] = 0;
-	_new5[id] = 0;
-	_new6[id] = 0;
+#define ClearVolume(x) _new##x[id] = 0
+	ClearVolume(0);
+	ClearVolume(1);
+	ClearVolume(2);
+	ClearVolume(3);
+	ClearVolume(4);
+	ClearVolume(5);
+	ClearVolume(6);
 }
 
 StructuredBuffer<float4> posBuffer;
@@ -100,18 +92,19 @@ void Fill(uint3 id : SV_DispatchThreadID)
 	_new6[id] = float4(k[8].xyz, 0);
 }
 
-#define DenoiseCell(x) _new##x[id] = (_new##x[id] + _new##x[id+uint3(1,0,0)] + _new##x[id+uint3(-1,0,0)] + _new##x[id+uint3(0,1,0)] + _new##x[id+uint3(0,-1,0)] + _new##x[id+uint3(0,0,1)] + _new##x[id+uint3(0,0,-1)]) / 7;
 
 [numthreads(8, 8, 8)]
 void Denoise(uint3 id : SV_DispatchThreadID)
 {
-	DenoiseCell(0);
-	DenoiseCell(1);
-	DenoiseCell(2);
-	DenoiseCell(3);
-	DenoiseCell(4);
-	DenoiseCell(5);
-	DenoiseCell(6);
+#define DenoiseVolume(x) _new##x[id] = (_old##x[id] * 0.8 + _new##x[id] * 0.2)
+
+	DenoiseVolume(0);
+	DenoiseVolume(1);
+	DenoiseVolume(2);
+	DenoiseVolume(3);
+	DenoiseVolume(4);
+	DenoiseVolume(5);
+	DenoiseVolume(6);
 }
 
 
@@ -152,15 +145,15 @@ void Realtime_Batched_CubeMap2SH(uint group_id : SV_GroupID, uint id : SV_GroupT
 
 	half3x3 TangentToWorld = half3x3(tangent, bi, dir);
 
-	for (int i = 0; i < 128; i++)
+	for (int i = 0; i < 64; i++)
 	{
-		float2 random = Hammersley(i, 128, p);
+		float2 random = Hammersley(i, 64, p);
 		float3 v = mul(UniformSampleHemisphere(random).xyz, TangentToWorld);
 		float4 c = CubeMapArray.SampleLevel(samplerCubeMapArray, float4(v, group_id), 0);
 		c += step(c.a, 0) * 0.1; //Todo: should sample skybox
 		radians += c;
 	}
-	radians /= 128;
+	radians /= 64;
 	radians *= 10000;
 
 	SH9 sh = SHCosineLobe(dir);

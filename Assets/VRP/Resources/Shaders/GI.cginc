@@ -31,7 +31,10 @@ SamplerState sampler_GIVolume_6;
 
 float3 GI_Diffuse(float3 worldPos, float3 normal) {
 	float3 gi_position = worldPos - _GI_Volume_Params.xyz;
-	gi_position /= _GI_Volume_Params.w; gi_position += 0.5;
+	gi_position /= _GI_Volume_Params.w;
+	float3 abs_gi_position = max(abs(gi_position) - 0.5, 0);
+	float atten = max(abs_gi_position.x, max(abs_gi_position.y, abs_gi_position.z)); atten = max(1 - atten, 0);
+	gi_position += 0.5;
 	gi_position = saturate(gi_position);
 
 	float3 res = 0;
@@ -68,7 +71,7 @@ float3 GI_Diffuse(float3 worldPos, float3 normal) {
 
 	res += sh9.c[8] * encode_sh0.xyz;
 
-	return res;
+	return res * atten;
 }
 #endif
 

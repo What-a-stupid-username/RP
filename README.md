@@ -20,7 +20,13 @@
 
 <center><font color=gray>with GI</font></center>
 
+![with-gi](./Pictures/post.PNG)
+
+<center><font color=gray>post process</font></center>
+
 ## Log
+
+2019.4.11 添加Postprocess
 
 2019.4.10 添加Realtime probe GI
 

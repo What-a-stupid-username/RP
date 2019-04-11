@@ -74,7 +74,7 @@
 				{
 					v2f o;
 					o.vertex = UnityObjectToClipPos(v.vertex);
-					o.uv = TRANSFORM_TEX(v.uv, _MainTex) + float2(-0.2,0);
+					o.uv = TRANSFORM_TEX(v.uv, _MainTex) + float2(-0.6,0);
 					return o;
 				}
 			ENDCG
@@ -91,7 +91,7 @@
 				{
 					v2f o;
 					o.vertex = UnityObjectToClipPos(v.vertex);
-					o.uv = TRANSFORM_TEX(v.uv, _MainTex) + float2(-0.2,0);
+					o.uv = TRANSFORM_TEX(v.uv, _MainTex) + float2(-0.8,0);
 					return o;
 				}
 			ENDCG
