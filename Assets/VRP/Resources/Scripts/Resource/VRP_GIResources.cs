@@ -290,7 +290,7 @@ namespace vrp
             }
 
             OffsetVolume(cb, size_of_volume, (position - last_position) / deltaDistance);
-            renderContext.ExecuteCommandBufferAsync(cb, ComputeQueueType.Default);
+            renderContext.ExecuteCommandBuffer(cb);
             cb.Clear();
 
             if (enable_bake_gi) {
@@ -461,7 +461,7 @@ namespace vrp
             
             cb.DispatchCompute(m_cs_UpdateSHVolume, kernel_Update_Probe_In_Volume, sampleNum / 4, 1, 1);
 
-            renderContext.ExecuteCommandBufferAsync(cb, ComputeQueueType.Default);
+            renderContext.ExecuteCommandBuffer(cb);
             cb.Clear();
         }
 

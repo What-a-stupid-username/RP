@@ -2,10 +2,20 @@
 {
 	Properties
 	{
+		_MainTex("Albedo", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
-		_MainTex("Albedo (RGB)", 2D) = "white" {}
-		_Glossiness("Smoothness", Range(0,1)) = 0.5
-		_Metallic("Metallic", Range(0,1)) = 0.0
+
+		_MetallicGlossMap("Metallic Smoothness", 2D) = "white" {}
+		[Gamma] _Metallic("Metallic", Range(0,1)) = 0.0
+
+		_Smoothness("Smoothness", Range(0,1)) = 0.5
+		_GlossMapScale("SmoothnessMapScale", Range(0,1)) = 1.0
+
+		_BumpMap("Normal Map", 2D) = "bump" {}
+		_BumpScale("Scale", Range(-10,10)) = 1.0
+
+		_EmissionMap("EmissionMap", 2D) = "white" {}
+		[HDR]_EmissionColor("EmissionColor", Color) = (0,0,0)
 	}
 	SubShader
 	{
@@ -26,60 +36,29 @@
 				#pragma target 3.0
 				#pragma multi_compile __ _Enable_GI
 				#pragma multi_compile __ _GI_Only
-
-				#include "PBS.cginc"
-
-
-				struct a2v {
-					float4 vert : POSITION;
-					float3 normal : NORMAL;
-				};
-
-				struct v2f {
-					float4 pos : SV_POSITION;
-					float3 normal : NORMAL;
-					float4 worldPos : TEXCOOD0;
-				};
-			
-				v2f vert(a2v i) {
-					v2f o;
-					o.pos = UnityObjectToClipPos(i.vert);
-					o.normal = UnityObjectToWorldNormal(i.normal);
-					o.worldPos = mul(unity_ObjectToWorld, i.vert);
-					return o;
-				}
-
-				float4 _Color;
-				float _Metallic;
-				float _Glossiness;
-
-				struct Result {
-					float4 sceneColor: SV_TARGET0;
-					float4 baseColor_Metallic: SV_TARGET1;
-					float4 normal_Roughness: SV_TARGET2;
-				};
+				
+				//properties
+				#pragma shader_feature _NORMALMAP
+				#pragma shader_feature _EMISSION
+				#pragma shader_feature _METALLICGLOSSMAP
+				//
+				
+				#include "Default.cginc"
 
 				Result frag(v2f i) {
-
-					SurfaceInfo IN;
-					IN.baseColor = _Color;
-					IN.alpha = _Color.a;
-					IN.metallic = _Metallic;
-					IN.smoothness = _Glossiness;
-					IN.normal = normalize(i.normal);
-					IN.tangent = normalize(cross(i.normal,float3(0,1,1)));
-					IN.worldPos = i.worldPos;
-					IN.z = i.pos.z;
+					
+					SurfaceInfo IN = GetSurfaceInfo(i);
 
 					float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
 
 					Result res;
+
+					PrepareGBuffer(/*out*/res, IN);
+
 					res.sceneColor = ComplexPBS(IN, viewDir);
 
-					res.baseColor_Metallic.rgb = _Color;
-					res.baseColor_Metallic.a = _Metallic;
-					res.normal_Roughness.rgb = (IN.normal + 1) / 2;
-					res.normal_Roughness.a = PerceptualRoughnessToRoughness(SmoothnessToPerceptualRoughness(_Glossiness));
+					res.sceneColor.rgb += Emmition(i.uv);
+
 
 					return res;
 				}				
@@ -320,4 +299,5 @@
 		}
 	}
 	FallBack "Diffuse"
+	CustomEditor "VRPDefaultShaderGUI"
 }

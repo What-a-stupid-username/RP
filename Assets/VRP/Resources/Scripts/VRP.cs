@@ -97,9 +97,9 @@ namespace vrp
                     helper.transform.up = Vector3.up;
                     helper.transform.forward = Vector3.forward;
                     float distance = m_asset.distributionDistanceFromCamera + m_asset.maxDistanceOfIndirectLight;
-                    helper.transform.position = camera.transform.position + Vector3.back * distance / 2;
-                    helper.orthographicSize = distance * 2;
-                    helper.farClipPlane = distance;
+                    helper.transform.position = camera.transform.position + Vector3.back * distance;
+                    helper.orthographicSize = distance;
+                    helper.farClipPlane = distance * 2;
                     CullResults.Cull(helper, renderContext, out giCullResult);
 
                     var commonCullResults = new CullResults();
