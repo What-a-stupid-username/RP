@@ -31,6 +31,7 @@ namespace vrp
                 if (mat!=null)
                     mat.shader = delfautShader;
             }
+            Debug.Log("Done!");
         }
 
 
