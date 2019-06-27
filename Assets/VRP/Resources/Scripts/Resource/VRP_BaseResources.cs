@@ -12,6 +12,9 @@ namespace vrp
         RenderTextureFormat m_format;
         bool m_liner;
         int m_msaa;
+        bool m_mipMap;
+        bool m_autoMip;
+
         public bool TestNeedModify(int w, int h, int d)
         {
             if (data != null && data.IsCreated())
@@ -35,20 +38,24 @@ namespace vrp
         {
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, d);
             renderTextureDescriptor.msaaSamples = m_msaa;
-            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.sRGB = !m_liner;
             data = new RenderTexture(renderTextureDescriptor);
             data.anisoLevel = 2;
             data.name = m_name;
-            
+            data.useMipMap = m_mipMap;
+            data.autoGenerateMips = m_autoMip;
+
             data.Create();
         }
 
-        public VRenderTexture2D(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false)
+        public VRenderTexture2D(string name, RenderTextureFormat textureFormat = RenderTextureFormat.ARGB32, bool liner = true, bool msaa = false, bool mipMap = false, bool autoMip = true)
         {
             m_name = name;
             m_format = textureFormat;
             m_liner = liner;
             m_msaa = msaa ? 8 : 1;
+            m_mipMap = mipMap;
+            m_autoMip = autoMip;
         }
 
         public void Dispose()
@@ -126,7 +133,7 @@ namespace vrp
             }
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format);
             renderTextureDescriptor.msaaSamples = m_msaa;
-            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.sRGB = !m_liner;
             renderTextureDescriptor.dimension = TextureDimension.Tex2DArray;
             renderTextureDescriptor.volumeDepth = n;
             renderTextureDescriptor.depthBufferBits = 24;
@@ -226,7 +233,7 @@ namespace vrp
             }
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format);
             renderTextureDescriptor.msaaSamples = m_msaa;
-            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.sRGB = !m_liner;
             renderTextureDescriptor.dimension = TextureDimension.CubeArray;
             renderTextureDescriptor.volumeDepth = n * 6;
             renderTextureDescriptor.depthBufferBits = 24;
@@ -295,7 +302,7 @@ namespace vrp
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, 0);
             renderTextureDescriptor.msaaSamples = m_msaa;
             renderTextureDescriptor.dimension = TextureDimension.Tex3D;
-            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.sRGB = !m_liner;
             renderTextureDescriptor.volumeDepth = d;
             renderTextureDescriptor.depthBufferBits = 0;
             renderTextureDescriptor.enableRandomWrite = true;
@@ -356,7 +363,7 @@ namespace vrp
             RenderTextureDescriptor renderTextureDescriptor = new RenderTextureDescriptor(w, h, m_format, 0);
             renderTextureDescriptor.msaaSamples = m_msaa;
             renderTextureDescriptor.dimension = TextureDimension.Cube;
-            renderTextureDescriptor.sRGB = m_liner;
+            renderTextureDescriptor.sRGB = !m_liner;
             renderTextureDescriptor.depthBufferBits = d;
             renderTextureDescriptor.enableRandomWrite = false;
             data = new RenderTexture(renderTextureDescriptor);

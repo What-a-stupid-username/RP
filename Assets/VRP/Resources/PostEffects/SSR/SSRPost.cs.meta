@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d91b537c91a85a2458819705c0134c3f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - HiZDepth: {instanceID: 0}
+  - helper: {instanceID: 0}
+  - HiZMipChainMaterial: {fileID: 2100000, guid: be833a610d912e141b057bf68bd42269,
+      type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

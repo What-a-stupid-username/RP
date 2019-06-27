@@ -39,8 +39,8 @@ namespace vrp
         [Tooltip("probs density(resolution of gi volume)")]
         [Range(8, 128)]
         public int realtimeGIDensity = 32;
-        [Tooltip("Importance sampling of camera frustum.")]
-        [Range(0f, 1f)]
+        [Tooltip("Importance sampling of camera frustum.(Now must set to 1 because of unfixed bug.)")]
+        [Range(1f, 1f)]
         public float frustumImportance = 0.6f;
         [Range(0.1f, 100f)]
         public float distributionDistanceFromCamera = 10;

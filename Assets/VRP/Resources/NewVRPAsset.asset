@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: NewVRPAsset
   m_EditorClassIdentifier: 
   resources: {fileID: 11400000, guid: 1240521223b10864a8a8d6be14e34520, type: 2}
-  MSAA: 1
+  MSAA: 0
   shadowDistance: 50
   cascadeNum: 4
   cascadeDistribution: 1.2
@@ -22,7 +22,7 @@ MonoBehaviour:
   enableTessellation: 1
   OnlyShowGI: 0
   maxDistanceOfIndirectLight: 10
-  enableRealtimeGI: 1
+  enableRealtimeGI: 0
   realtimeGIDensity: 8
   frustumImportance: 1
   distributionDistanceFromCamera: 32
