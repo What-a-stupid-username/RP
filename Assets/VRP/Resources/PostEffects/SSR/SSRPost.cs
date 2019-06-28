@@ -22,6 +22,8 @@ public class SSRPost : VPostProcess
         public static int _HiZDepth = Shader.PropertyToID("_HiZDepth");
         public static int _HiZBufferSize = Shader.PropertyToID("_HiZBufferSize");
         public static int _SceneColor = Shader.PropertyToID("_SceneColor");
+        public static int _NormalSmoothness = Shader.PropertyToID("_NormalSmoothness");
+        public static int _ProjMat = Shader.PropertyToID("_ProjMat");
     }
 
 
@@ -56,8 +58,15 @@ public class SSRPost : VPostProcess
 
         cb.Blit(textureIdentifiers.sceneColor, VColorBuffer.data);
         cb.SetGlobalTexture(ShaderProperties._SceneColor, VColorBuffer.data);
+        cb.SetGlobalTexture(ShaderProperties._NormalSmoothness, textureIdentifiers.normal_Roughness);
+
+        cb.SetGlobalMatrix(ShaderProperties._ProjMat, GL.GetGPUProjectionMatrix(camera.projectionMatrix, false));
 
         cb.Blit(null, textureIdentifiers.sceneColor, SSRMaterial, 0);
+
+        //VRPDebuger.ShowTexture(cb, textureIdentifiers.depth_Velocity, textureIdentifiers.sceneColor, 0);
+        //VRPDebuger.ShowTexture(cb, textureIdentifiers.baseColor_Metallic, textureIdentifiers.sceneColor, 1);
+        //VRPDebuger.ShowTexture(cb, textureIdentifiers.normal_Roughness, textureIdentifiers.sceneColor, 2);
     }
 
     void GenerateMipMaps()

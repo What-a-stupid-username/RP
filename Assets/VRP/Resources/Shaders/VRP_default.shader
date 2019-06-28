@@ -59,6 +59,8 @@
 
 					res.sceneColor.rgb += Emmition(i.uv);
 
+					res.baseColor_Metallic = float4(IN.baseColor, IN.metallic);
+					res.normal_Roughness = float4(mul(UNITY_MATRIX_V, IN.normal).xyz * float3(1,1,-1), IN.smoothness);
 
 					return res;
 				}				
