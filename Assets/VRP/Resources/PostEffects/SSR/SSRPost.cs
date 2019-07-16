@@ -43,7 +43,7 @@ public class SSRPost : VPostProcess
 
         #region Check properties
         Camera camera = GetComponent<Camera>();
-        int w = Mathf.ClosestPowerOfTwo(camera.pixelWidth), h = Mathf.ClosestPowerOfTwo(camera.pixelHeight);
+        int w = Mathf.ClosestPowerOfTwo(camera.pixelWidth) / 2, h = Mathf.ClosestPowerOfTwo(camera.pixelHeight) / 2;
         if (VHiZDepth.TestNeedModify(w, h, 0))
         {
             cb.SetGlobalVector(ShaderProperties._HiZBufferSize, new Vector4(w, h, 0, 0));

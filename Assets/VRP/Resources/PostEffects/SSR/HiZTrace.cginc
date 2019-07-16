@@ -1,5 +1,4 @@
-
-#define HIZ_START_LEVEL 0
+#define HIZ_START_LEVEL 4
 #define HIZ_MAX_LEVEL 4
 
 #define MAX_ITERATIONS 64
@@ -7,17 +6,21 @@
 float2 _HiZBufferSize;
 Texture2D _HiZDepth; SamplerState _point_clamp_sampler;
 
+float4x4 _ProjMat;
 
 inline float2 Depth(int mip, float2 uv) {
 	return _HiZDepth.SampleLevel(_point_clamp_sampler, uv, mip);
 }
 
 inline float D2Z(float4x4 proj, float d) {
+	if (d <= 0.00001) return 999999999;
 	return proj._34 / (d - proj._33);
 }
 
 inline float2 D2Z(float4x4 proj, float2 d) {
-	return proj._34 / (d - proj._33);
+	float2 res = proj._34 / (d - proj._33);
+	res += (d <= 0.00001) * 999999999;
+	return res;
 }
 
 inline float2 V2S(float4x4 proj, float3 viewPos) {
@@ -53,7 +56,7 @@ float minimum_depth_plane(float2 ray, float level) {
 
 
 bool MoveToNext(in out float2 pos_s, const float2 dir_s, in out float3 pos_v, const float3 dir_v,
-				const float2 m11m22, const int level, const float2 cell_count,
+				const float2 m11m22, const float2 cell_count,
 				const float2 cross_step, const float2 cross_offset) {
 
 	float2 cell_size = 1.0 / cell_count;
@@ -64,19 +67,19 @@ bool MoveToNext(in out float2 pos_s, const float2 dir_s, in out float3 pos_v, co
 
 	pos_s = intersection_s + ((solutions.x < solutions.y) ? float2(cross_offset.x, 0.0) : float2(0.0, cross_offset.y));
 
-	float2 inersection_v = (intersection_s * 2 - 1) / m11m22;
+	float2 inersection_v = (pos_s * 2 - 1) / m11m22;
 
-	float inter_y_div_x = inersection_v.x / inersection_v.y;
+	float inter_y_div_x = inersection_v.y / inersection_v.x;
 
 	float k = (pos_v.y - inter_y_div_x * pos_v.x) / (inter_y_div_x * dir_v.x - dir_v.y);
 
 	pos_v += dir_v * k;
 
-	return any(pos_s > 1) && any(pos_s < 0);
+	return !(any(pos_s > 1) || any(pos_s < 0));
 }
 
 bool HiZTrace(const float4x4 projMat, in out float3 pos_v, const float3 dir_v, out float2 hitUV, out uint iterations) {
-	float level = HIZ_START_LEVEL;
+	int level = HIZ_START_LEVEL;
 	
 	hitUV = V2S(projMat, pos_v);
 	float3 iterPosition_v = pos_v;
@@ -89,60 +92,117 @@ bool HiZTrace(const float4x4 projMat, in out float3 pos_v, const float3 dir_v, o
 	cross_step = saturate(cross_step);
 
 	iterations = 0;
-	int2 flags[HIZ_MAX_LEVEL];
+	int2 flags[HIZ_MAX_LEVEL+2];
 	[UNROLL]
-	for (int i = 0; i < HIZ_MAX_LEVEL; i++)
+	for (int i = 0; i < HIZ_MAX_LEVEL+2; i++)
 	{
 		flags[i] = -1;
 	}
 
 	[BRANCH]
 	if (dir_v.z > 0) {
-
-		float3 tmp_pos_v = pos_v;
-		float2 tmp_pos_s = hitUV;
-
-		bool no_hit;
-		int ppp = 1;
 		[LOOP]
-		while (/*level >= 0 && iterations < MAX_ITERATIONS*/ppp--) {
-			no_hit = false;
+		while (iterations < MAX_ITERATIONS) {
+			bool hit = false;
+			float3 tmp_pos_v = pos_v;
+			float2 tmp_pos_s = hitUV;
+
+			bool has_hit_on_parent_level = false;
+			while (level < HIZ_MAX_LEVEL)
+			{
+				float2 cell_count_ = CellCount(level + 1);
+				float2 cell_id_ = cell(tmp_pos_s, cell_count_);
+				if (all(cell_id_ == flags[level + 1].xy))
+					break;
+				else {
+					level += 1;
+				}
+			}
+
 			float2 cell_count = CellCount(level);
+			float2 cell_id = cell(tmp_pos_s, cell_count);
+
 
 			float2 max_min_depth_of_cell = Depth(level, hitUV);
 			float2 min_max_z_of_cell = D2Z(projMat, max_min_depth_of_cell);
 
-			if (pos_v.z > min_max_z_of_cell.y + 0.00001) no_hit = true;
-
 			bool has_next = MoveToNext(tmp_pos_s, dir_s, tmp_pos_v, dir_v,
-				m11m22, level, cell_count,
+				m11m22, cell_count,
 				cross_step, cross_offset);
+			
+			if (level >= 1) {
+				if (tmp_pos_v.z > min_max_z_of_cell.x && pos_v.z < min_max_z_of_cell.y) hit = true;
+			}
+			else {
+				if (tmp_pos_v.z > min_max_z_of_cell.x - 0.1 && pos_v.z < min_max_z_of_cell.x + 0.1) {
+					return true;
+				}
+			}
 
-			hitUV = tmp_pos_s;
-			pos_v = tmp_pos_v;
-			return true;
-
-
-			if (tmp_pos_v.z < min_max_z_of_cell.x - 0.00001) no_hit = true;
-
-
-
-			if (no_hit) {
+			if (!hit) {
 				if (!has_next) return false;
 				hitUV = tmp_pos_s;
 				pos_v = tmp_pos_v;
 			}
-			else if (level == 0){
-				return true;
+			else {
+				flags[level] = cell_id;
+				level -= 1;
 			}
-
-			if (level < HIZ_MAX_LEVEL) level++;
 
 			++iterations;
 		}
 	}
 	else {
 		return false;
+		//[LOOP]
+		//while (iterations < MAX_ITERATIONS) {
+		//	bool hit = false;
+		//	float3 tmp_pos_v = pos_v;
+		//	float2 tmp_pos_s = hitUV;
+
+		//	bool has_hit_on_parent_level = false;
+		//	while (level < HIZ_MAX_LEVEL)
+		//	{
+		//		float2 cell_count_ = CellCount(level + 1);
+		//		float2 cell_id_ = cell(tmp_pos_s, cell_count_);
+		//		if (all(cell_id_ == flags[level + 1].xy))
+		//			break;
+		//		else {
+		//			level += 1;
+		//		}
+		//	}
+
+		//	float2 cell_count = CellCount(level);
+		//	float2 cell_id = cell(tmp_pos_s, cell_count);
+
+
+		//	float2 max_min_depth_of_cell = Depth(level, hitUV);
+		//	float2 min_max_z_of_cell = D2Z(projMat, max_min_depth_of_cell);
+
+		//	bool has_next = MoveToNext(tmp_pos_s, dir_s, tmp_pos_v, dir_v,
+		//		m11m22, cell_count,
+		//		cross_step, cross_offset);
+
+		//	if (level >= 1) {
+		//		if (tmp_pos_v.z < min_max_z_of_cell.x && pos_v.z > min_max_z_of_cell.y) hit = true;
+		//	}
+		//	else {
+		//		if (tmp_pos_v.z < min_max_z_of_cell.x - 0.1 && pos_v.z > min_max_z_of_cell.x + 0.1) {
+		//			return true;
+		//		}
+		//	}
+
+		//	if (!hit) {
+		//		if (!has_next) return false;
+		//		hitUV = tmp_pos_s;
+		//		pos_v = tmp_pos_v;
+		//	}
+		//	else {
+		//		flags[level] = cell_id;
+		//		level -= 1;
+		//	}
+		//	++iterations;
+		//}
 	}
 
 	return false;
